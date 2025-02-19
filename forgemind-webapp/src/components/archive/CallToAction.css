@@ -1,0 +1,50 @@
+.cta-section {
+  background: var(--secondary-color);
+  color: var(--primary-color);
+  padding: 60px 20px;
+  text-align: center;
+  position: relative; /* Make sure there's no weird overlap */
+}
+
+.cta-section h2 {
+  font-size: 2rem;
+  margin-bottom: 1rem;
+}
+
+.cta-section p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem; /* Enough space above the button */
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.cta-button {
+  background: var(--primary-color);
+  color: var(--secondary-color);
+  padding: 1rem 2rem;
+  text-decoration: none;
+  font-size: 1rem;
+  border-radius: 4px;
+  transition: background 0.3s ease;
+  display: inline-block; /* Ensure it doesn't shrink to text width */
+  margin-top: 1rem;      /* Extra spacing from the paragraph */
+}
+
+.cta-button:hover {
+  background: #ccc;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .cta-section h2 {
+    font-size: 1.8rem;
+  }
+
+  .cta-section p {
+    font-size: 1rem;
+  }
+
+  .cta-button {
+    font-size: 0.9rem;
+  }
+}

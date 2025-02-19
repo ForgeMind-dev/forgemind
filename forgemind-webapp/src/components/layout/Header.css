@@ -1,0 +1,82 @@
+.header {
+  width: 100%;
+  padding: 20px 0;
+  position: fixed;
+  top: 0;
+  z-index: 100;
+  background-color: var(--secondary-color);
+  border-bottom: 1px solid #333;
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
+}
+
+.header.scrolled {
+  box-shadow: 0 4px 12px rgba(255, 255, 255, 0.2);
+  background-color: #000;
+}
+
+.navigation {
+  display: flex;
+  align-items: center;
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 20px;
+}
+
+/* Left Section: Logo and Navigation Links */
+.left-section {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.logo-image {
+  height: 35px;
+  width: auto;
+  object-fit: contain;
+  margin-top: 10px;
+  margin-bottom: -5px;
+  margin-right: 60px;
+}
+
+.nav-links {
+  display: flex;
+  list-style: none;
+}
+
+.nav-links li {
+  margin-right: 30px;
+}
+
+.nav-links li a {
+  text-decoration: none;
+  color: var(--primary-color);
+  font-weight: 600;
+  transition: color 0.3s ease;
+}
+
+.nav-links li a:hover {
+  color: var(--accent-color);
+}
+
+/* Right Section: Login Button */
+.right-section {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  flex: 1;
+}
+
+.login-button {
+  background-color: #a9c1f2;
+  color: #000;
+  padding: 8px 16px;
+  border-radius: 100px;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.login-button:hover {
+  background-color: #eee;
+  transform: translateY(-2px);
+}

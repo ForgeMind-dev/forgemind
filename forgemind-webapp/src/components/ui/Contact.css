@@ -1,0 +1,51 @@
+.contact-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.contact h2 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  font-weight: 700;
+}
+
+.contact p {
+  font-size: 1.2rem;
+  margin-bottom: 2rem;
+  color: #ccc;
+}
+
+.call-info {
+  margin-bottom: 3rem;
+}
+
+/* Email link styling */
+.contact-email-link {
+  color: var(--primary-color);
+  text-decoration: underline;
+  font-weight: 500;
+  transition: color 0.3s ease;
+}
+
+.contact-email-link:hover {
+  color: var(--secondary-color);
+}
+
+/* Book a Call button styling */
+.book-call {
+  display: inline-block;
+  background-color: #a9c1f2; /* You can change this color independently */
+  color: #000;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-radius: 4px;
+  text-decoration: none;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  margin-top: 2rem;
+}
+
+.book-call:hover {
+  background-color: #98b2e8; /* Slightly darker on hover */
+  transform: translateY(-2px);
+}

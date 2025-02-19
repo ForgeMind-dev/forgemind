@@ -1,0 +1,24 @@
+.landing {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #000; /* Entire page stays black */
+  }
+  
+  /* 
+     Each "landing-section" is separated by a thin top border.
+     This creates a subtle line dividing sections while 
+     maintaining an all-black background.
+  */
+  .landing-section {
+    width: 100%;
+    border-top: 1px solid #333; 
+    padding: 80px 20px;
+    box-sizing: border-box;
+  }
+  
+  /* Remove border on the very first section (the Hero is above it) */
+  .landing-section:first-of-type {
+    border-top: none;
+  }
+  

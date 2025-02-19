@@ -1,0 +1,104 @@
+.hero {
+  position: relative;
+  width: 100%;
+  min-height: 90vh; /* Enough space to be impactful */
+  background-color: #000; /* Dark background */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 80px 20px; /* Extra top padding to avoid overlapping header */
+}
+
+.hero-content {
+  max-width: 800px;
+  margin: 0 auto;
+  color: #fff;
+}
+
+.animated-icon {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 1rem;
+  /* Spin animation */
+  animation: spin 100000000s linear infinite;
+}
+
+/* Keyframes for spinning icon */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.hero-title {
+  font-size: 3rem;
+  font-weight: 700;
+  line-height: 1.2;
+  margin-bottom: 1rem;
+}
+
+.highlight {
+  background: linear-gradient(90deg, #ffffff 0%, #a9c1f2 50%, #7a96ee 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
+
+.hero-subtitle {
+  margin-top: 30px;
+  font-size: 1.25rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  color: #ccc; /* Slightly lighter than white for contrast */
+}
+
+/* New extra text style */
+.hero-extra {
+  font-size: 1rem;
+  color: #ffffff;
+  margin-bottom: 3rem;
+  font-weight: 200;
+  margin-top: 50px;
+}
+
+/* Optional distinct style for rotating text */
+.rotating-highlight {
+  color: #fff;
+  font-weight: 1000;
+  text-decoration: underline;
+}
+
+.hero-cta {
+  background-color: #fff;
+  color: #000;
+  padding: 0.8rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  text-decoration: none;
+  border-radius: 4px;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+}
+
+.hero-cta:hover {
+  background-color: #eee;
+  transform: translateY(-2px);
+  margin-top: 10px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+  .animated-icon {
+    width: 60px;
+    height: 60px;
+  }
+}

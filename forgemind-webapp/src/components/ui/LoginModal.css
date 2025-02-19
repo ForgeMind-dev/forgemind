@@ -1,0 +1,92 @@
+/* Dark overlay behind the modal */
+.login-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6); /* semi-transparent black */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 999; /* ensure it's above other elements */
+  }
+  
+  /* Modal container */
+  .login-modal-content {
+    background-color: #000;
+    color: #fff;
+    border: 1px solid #333;
+    border-radius: 8px;
+    padding: 30px;
+    width: 400px;
+    max-width: 90%;
+    position: relative;
+    text-align: center;
+  }
+  
+  /* Close button (top-right corner) */
+  .close-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: transparent;
+    border: none;
+    font-size: 1.5rem;
+    color: #fff;
+    cursor: pointer;
+  }
+  
+  /* Input fields */
+  .login-input {
+    display: block;
+    width: 100%;
+    margin: 10px auto;
+    padding: 10px;
+    background-color: #111;
+    border: 1px solid #333;
+    color: #fff;
+    border-radius: 4px;
+    outline: none;
+  }
+  
+  .login-input:focus {
+    border-color: #555;
+  }
+  
+  /* Submit button */
+  .login-submit {
+    display: inline-block;
+    background-color: #a9c1f2;
+    color: #000;
+    padding: 0.8rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin-top: 10px;
+    transition: background-color 0.3s ease, transform 0.3s ease;
+  }
+  
+  .login-submit:hover {
+    background-color: #98b2e8;
+    transform: translateY(-2px);
+  }
+  
+  /* Message that appears after submission */
+  .login-message {
+    margin-top: 20px;
+    color: #ccc;
+  }
+  
+  .waitlist-link {
+    color: #fff;
+    text-decoration: underline;
+    font-weight: 500;
+  }
+  
+  .waitlist-link:hover {
+    color: #a9c1f2;
+  }
+  

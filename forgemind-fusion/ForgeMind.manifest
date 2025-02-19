@@ -1,0 +1,14 @@
+{
+	"autodeskProduct":	"Fusion",
+	"type":	"addin",
+	"id":	"c851ed1d-87c7-4d31-a87d-ece30500e764",
+	"author":	"Furkan Toprak",
+	"description":	{
+		"":	""
+	},
+	"version":	"0.0.0",
+	"runOnStartup":	true,
+	"supportedOS":	"windows|mac",
+	"editEnabled":	true,
+	"iconFilename":	"AddInIcon.svg"
+}
