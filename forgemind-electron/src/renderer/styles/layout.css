@@ -1,0 +1,42 @@
+/* Layout Styles */
+
+.app-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #000; /* black background */
+}
+  
+  .app-container {
+    position: relative;
+    height: 100%;
+    width: 100%;
+    background-color: #000; /* black */
+    margin-left: 0px;     /* so content starts after the 250px sidebar */
+    transition: margin-left 0.3s ease;
+    /* Remove .sidebar-open logic if you want the sidebar always visible */
+  }
+  .app-container.sidebar-open {
+    margin-left: 250px; /* match sidebar width */
+    width: calc(100% - 250px);
+  }
+  
+  .menu-btn {
+    position: absolute;
+    top: 16px;
+    left: 16px;
+    background: none;
+    border: none;
+    color: #fff;
+    font-size: 24px;
+    cursor: pointer;
+  }
+  
+  .cad-connection-container {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    display: flex;
+  }
+  

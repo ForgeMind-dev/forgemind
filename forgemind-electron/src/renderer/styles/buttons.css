@@ -1,0 +1,46 @@
+/* Button Styles */
+
+/* CONNECT BUTTON (top-right) */
+.connect-cad-btn {
+    background-color: #a9c1f2;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .connect-cad-btn:hover {
+    background-color: #7a96ee;
+  }
+  
+  /* When a CAD is chosen, show side-by-side controls */
+  .chosen-cad-controls {
+    display: flex;
+    gap: 8px; /* spacing between chosen CAD and Disconnect buttons */
+  }
+  
+  .chosen-cad-btn {
+    background-color: #7a96ee;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .chosen-cad-btn:hover {
+    background-color: #7a96ee;
+  }
+  
+  .disconnect-cad-btn {
+    background-color: #eee;
+    color: #333;
+    border: none;
+    border-radius: 4px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .disconnect-cad-btn:hover {
+    background-color: #ccc;
+  }
+  

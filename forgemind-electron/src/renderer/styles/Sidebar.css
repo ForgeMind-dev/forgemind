@@ -1,0 +1,61 @@
+/* Sidebar.css */
+
+/* Dark sidebar background with white text */
+.sidebar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 250px;
+  height: 100%;
+  background-color: #000;  /* black */
+  color: #fff;             /* white text */
+  border-right: 1px solid #444; /* subtle dark border */
+  padding: 16px;
+  overflow-y: auto;
+  z-index: 0; /* ensure it’s on top of main content */
+}
+
+/* Button for new chat */
+.new-chat-btn {
+  width: 100%;
+  background-color: #444; /* dark gray button */
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px;
+  cursor: pointer;
+  margin-bottom: 16px;
+}
+
+.new-chat-btn:hover {
+  background-color: #666; /* slightly lighter hover */
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin-bottom: 16px;
+}
+
+.sidebar ul li {
+  margin-bottom: 8px;
+  cursor: pointer;
+  padding: 4px;
+  color: #ccc; /* slightly lighter text for list items */
+}
+
+.sidebar ul li:hover {
+  color: #fff; /* highlight on hover */
+}
+
+.active-chat {
+  font-weight: bold;
+  color: #fff; /* highlight the active chat more strongly */
+}

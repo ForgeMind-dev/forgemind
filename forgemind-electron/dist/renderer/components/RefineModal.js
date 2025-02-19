@@ -1,0 +1,7 @@
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+const jsx_runtime_1 = require("react/jsx-runtime");
+const RefineModal = ({ step, onNextStep, onCancel }) => {
+    return ((0, jsx_runtime_1.jsx)("div", Object.assign({ className: "modal-overlay" }, { children: (0, jsx_runtime_1.jsxs)("div", Object.assign({ className: "modal-content" }, { children: [step === 1 && ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("h2", { children: "Refine Curved Surfaces" }), (0, jsx_runtime_1.jsx)("p", { children: "Which surfaces do you want to refine? Our software automatically understands your CAD surfaces." }), (0, jsx_runtime_1.jsx)("div", Object.assign({ className: "modal-button-row" }, { children: (0, jsx_runtime_1.jsx)("button", Object.assign({ className: "primary-modal-btn", onClick: onNextStep }, { children: "Submit" })) }))] })), step === 2 && ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("h2", { children: "Refine Curved Surfaces" }), (0, jsx_runtime_1.jsx)("p", { children: "Refining surfaces..." }), (0, jsx_runtime_1.jsx)("div", { className: "spinner" }), (0, jsx_runtime_1.jsx)("div", Object.assign({ className: "modal-button-row" }, { children: (0, jsx_runtime_1.jsx)("button", Object.assign({ className: "close-modal-btn", onClick: onCancel }, { children: "Cancel" })) }))] }))] })) })));
+};
+exports.default = RefineModal;

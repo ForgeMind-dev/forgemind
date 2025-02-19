@@ -1,0 +1,83 @@
+/* Chat Window Styles */
+
+/* CENTER CONTENT (Landing Screen) */
+.center-content {
+  width: 100%;
+  height: calc(100% - 160px);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #000; /* black */
+}
+  .main-logo {
+    width: 400px;
+    height: auto;
+    margin-bottom: 40px;
+  }
+  .center-content h1 {
+    font-size: 24px;
+    color: #fff; /* white text */
+  }
+  
+  /* MESSAGES: displayed after first user message in a chat */
+  .messages-container {
+    width: 100%;
+    height: calc(100% - 160px);
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding-top: 90px;
+    background-color: #000; /* black */
+  }
+  
+  /* Message bubble styles */
+/* Message bubbles */
+.msg {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 90%;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 8px;
+}
+  
+.ai-msg {
+  text-align: left;
+  background-color: #333; /* dark gray bubble */
+  color: #fff;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+}
+  
+  .ai-msg strong {
+    font-weight: bold;
+  }
+  
+  .ai-msg ol, .ai-msg ul {
+    padding-left: 20px;
+  }
+  
+  .ai-msg li {
+    margin-bottom: 5px;
+    list-style-type: decimal;
+  }
+  
+  .ai-msg ul li {
+    list-style-type: disc;
+  }
+  
+  .ai-msg p {
+    margin: 0 0 10px;
+    line-height: 1.5;
+  }
+  
+  .user-msg {
+    align-self: flex-end;
+    background-color: #444; /* slightly different bubble color */
+    color: #fff;
+  }
+  
