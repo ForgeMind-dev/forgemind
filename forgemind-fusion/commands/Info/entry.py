@@ -117,6 +117,7 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
             else:
                 futil.log(f'backend returned status code {response.getcode()}')
         except urllib.error.URLError as e:
+            ui.messageBox("[ForgeMind] Something went wrong.")
             futil.log(f'Error polling backend: {e}')
 
     get_logic()
