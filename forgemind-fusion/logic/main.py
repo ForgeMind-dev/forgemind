@@ -1,13 +1,12 @@
 import adsk.core, adsk.fusion, traceback
 from adsk.core import Application, UserInterface
 from ..lib import fusionAddInUtils as futil
+import math
 
 def run_logic(logic: str):
     ui = None
     try:
-        # futil.log('FURGO 1 running logic')
-        # exec(logic)
-        futil.log('FURGO 2 running logic')
+        futil.log('Running logic')
         futil.log(logic)
         exec(logic)
         # app = adsk.core.Application.get()

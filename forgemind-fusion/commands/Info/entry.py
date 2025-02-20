@@ -106,15 +106,15 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
     def get_logic():
         try:
-            response = urllib.request.urlopen('http://localhost:5000/poll')
+            response = urllib.request.urlopen('http://127.0.0.1:5000/poll')
             if response.getcode() == 200:
                 logic = response.read().decode('utf-8')
-                futil.log('Running logic: ' + logic)
+                futil.log('Running logic:\n------------START--------\n' + logic+'\n------------END--------')
                 run_logic(logic)
             else:
-                futil.log(f'example.com returned status code {response.getcode()}')
+                futil.log(f'backend returned status code {response.getcode()}')
         except urllib.error.URLError as e:
-            futil.log(f'Error polling example.com: {e}')
+            futil.log(f'Error polling backend: {e}')
 
     get_logic()
 
@@ -126,8 +126,8 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 # This function will be called when the user hits the OK button in the command dialog
 def command_execute(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME} Command Execute Event')
-    msg = f'Running that shit'
-    ui.messageBox(msg)
+    # msg = f'Running that shit'
+    # ui.messageBox(msg)
 
 
 # This function will be called when the user completes the command.

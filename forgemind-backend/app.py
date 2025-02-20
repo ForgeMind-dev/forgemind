@@ -38,7 +38,7 @@ def chat():
     except ValidationError as e:
         return jsonify({"status": "error", "message": "Invalid payload", "errors": e.errors()}), 400
     
-    response = supabase.table("chats").insert({
+    chat_insertion = supabase.table("chats").insert({
         "text": data.text,
         "user_id": data.user_id,
     }).execute()
@@ -68,20 +68,30 @@ def chat():
     messages = client.beta.threads.messages.list(thread_id=thread.id)
 
     # Print the assistant's response
-    response = ''
+    assistant_response = ''
     for message in messages.data:
         if message.role == "assistant":
             message_chunk = message.content[0].text.value
             print(message_chunk, end='')
-            response += message_chunk
+            assistant_response += message_chunk
+    
+    insert_operation = supabase.table("operations").insert({
+        "instruction": assistant_response,
+        "chat_id": chat_insertion["data"][0]["id"],
+        "user_id": data.user_id,
+        "cad_type": "fusion",
+        "status": "pending",
+    }).execute()
     
     # You can also add logic here to process the prompt using AI/NLP
-    return jsonify({"status": "success", "response": response})
+    return jsonify({"status": "success", "response": chat_insertion})
 
 @app.route('/poll', methods=['GET'])
 def poll():
-    # return "app = adsk.core.Application.get()\nui = app.userInterface\n\ndesign = app.activeProduct\nrootComp = design.rootComponent\nsketches = rootComp.sketches\nxyPlane = rootComp.xYConstructionPlane\nsketch = sketches.add(xyPlane)\n\ncircles = sketch.sketchCurves.sketchCircles\nlines = sketch.sketchCurves.sketchLines\n\n# Draw a star using lines\ncenterPoint = adsk.core.Point3D.create(0, 0, 0)\npoints = []\nnum_points = 5\nouter_radius = 4\ninner_radius = 2\n\nfor i in range(num_points * 2):\n    angle = math.pi / num_points * i  # Twice the number of points for the star\n    if i % 2 == 0:\n        radius = outer_radius\n    else:\n        radius = inner_radius\n    x = radius * math.cos(angle)\n    y = radius * math.sin(angle)\n    points.append(adsk.core.Point3D.create(x, y, 0))\n\nfor i in range(len(points)):\n    line = lines.addByTwoPoints(points[i], points[(i + 2) % len(points)])"
-    return "app = adsk.core.Application.get()\nui = app.userInterface\nui.messageBox('Hi')"
+    # [AI generated] Works
+    # "app = adsk.core.Application.get()\nui = app.userInterface\ndesign = app.activeProduct\nrootComp = design.rootComponent\nsketches = rootComp.sketches\nui.messageBox('Furgo 0')\nxyPlane = rootComp.xYConstructionPlane\nui.messageBox('Furgo 1')\nsketch = sketches.add(xyPlane)\nui.messageBox('Furgo 2')\ncircles = sketch.sketchCurves.sketchCircles\nui.messageBox('Furgo 3')\nlines = sketch.sketchCurves.sketchLines\nui.messageBox('Furgo 4')\ncenterPoint = adsk.core.Point3D.create(0, 0, 0)\nui.messageBox('Furgo 5')\nui.messageBox('Furgo 6')\npoints = []\nui.messageBox('Furgo 7')\nnum_points = 5\nui.messageBox('Furgo 8')\nouter_radius = 4\nui.messageBox('Furgo 9')\ninner_radius = 2\nui.messageBox('Furgo 10')\nfor i in range(num_points * 2):\n    ui.messageBox('FUCK THE POLICE')\n    angle = (math.pi / num_points * i)\n    ui.messageBox('Furgo 11')\n    if i % 2 == 0:\n        radius = outer_radius\n    else:\n        radius = inner_radius\n    x = radius * math.cos(angle)\n    y = radius * math.sin(angle)\n    points.append(adsk.core.Point3D.create(x, y, 0))\n\nfor i in range(len(points)):\n    line = lines.addByTwoPoints(points[i], points[(i + 2) % len(points)])"
+    print('polling...')
+    return 
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
