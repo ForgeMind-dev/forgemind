@@ -1,7 +1,7 @@
 import adsk.core, adsk.fusion, traceback
 from adsk.core import Application, UserInterface
 
-def run_logic(app: Application, ui: UserInterface, context):
+def run_logic():
     ui = None
     try:
         app = adsk.core.Application.get()
@@ -21,11 +21,13 @@ def run_logic(app: Application, ui: UserInterface, context):
 
         # Draw some circles.
         circles = sketch.sketchCurves.sketchCircles
+
         circle1 = circles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), 2)
         circle2 = circles.addByCenterRadius(adsk.core.Point3D.create(8, 3, 0), 3)
 
         # Add a circle at the center of one of the existing circles.
         circle3 = circles.addByCenterRadius(circle2.centerSketchPoint, 4)
+        
     except:
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))

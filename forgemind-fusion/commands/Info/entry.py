@@ -9,10 +9,15 @@
 #  AUTODESK, INC. DOES NOT WARRANT THAT THE OPERATION OF THE PROGRAM WILL BE
 #  UNINTERRUPTED OR ERROR FREE.
 
+import time
 import adsk.core
 import os
 from ... import config
+from ...logic import run_logic
 from ...lib import fusionAddInUtils as futil
+import threading
+import urllib.request
+
 app = adsk.core.Application.get()
 ui = app.userInterface
 
@@ -40,6 +45,7 @@ local_handlers = []
 # Executed when add-in is run.
 def start():
     # ******************************** Create Command Definition ********************************
+    futil.log('[4] FORGEMIND ADD IN BEING RUN - start')
     cmd_def = ui.commandDefinitions.addButtonDefinition(CMD_ID, CMD_NAME, CMD_Description, ICON_FOLDER)
 
     # Add command created handler. The function passed here will be executed when the command is executed.
@@ -64,6 +70,25 @@ def start():
 
     # Now you can set various options on the control such as promoting it to always be shown.
     control.isPromoted = IS_PROMOTED
+
+
+    def poll_example():
+        try:
+            response = urllib.request.urlopen('https://example.com')
+            if response.getcode() == 200:
+                futil.log('example.com is up')
+            else:
+                futil.log(f'example.com returned status code {response.getcode()}')
+        except urllib.error.URLError as e:
+            futil.log(f'Error polling example.com: {e}')
+        finally:
+            # Schedule the next poll
+            threading.Timer(10, poll_example).start()
+
+    # # # Start the polling
+    while True:
+        poll_example()
+        time.sleep(5)
 
 
 # Executed when add-in is stopped.
@@ -106,7 +131,8 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 # This function will be called when the user hits the OK button in the command dialog
 def command_execute(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME} Command Execute Event')
-    msg = f'Hello World'
+    msg = f'Running that shit'
+    run_logic()
     ui.messageBox(msg)
 
 

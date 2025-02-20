@@ -7,8 +7,7 @@ import os
 
 DEBUG = True
 
-ADDIN_NAME = os.path.basename(os.path.dirname(__file__))
-
+ADDIN_NAME = 'ForgeMind'
 COMPANY_NAME = 'ForgeMind'
 
 # FIXME add good comments
