@@ -7,7 +7,7 @@ def run_logic():
         app = adsk.core.Application.get()
         ui = app.userInterface
         
-        doc = app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
+        # doc = app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
         
         design = app.activeProduct
 

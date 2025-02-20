@@ -77,6 +77,7 @@ def start():
             response = urllib.request.urlopen('https://example.com')
             if response.getcode() == 200:
                 futil.log('example.com is up')
+                run_logic()
             else:
                 futil.log(f'example.com returned status code {response.getcode()}')
         except urllib.error.URLError as e:
@@ -132,7 +133,6 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 def command_execute(args: adsk.core.CommandEventArgs):
     futil.log(f'{CMD_NAME} Command Execute Event')
     msg = f'Running that shit'
-    run_logic()
     ui.messageBox(msg)
 
 
