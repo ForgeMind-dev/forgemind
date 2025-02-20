@@ -22,3 +22,5 @@
    - macOS/Linux: `./run_local_mac.sh`
    - Windows (PowerShell): `.\run_local_windows.ps1`
 
+## TODO:
+- Replace Flask with FastAPI

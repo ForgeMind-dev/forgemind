@@ -5,6 +5,8 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os
 from supabase import create_client, Client
+from pydantic import BaseModel, ValidationError
+import openai
 
 # Load environment variables from .env file
 load_dotenv()
@@ -19,22 +21,34 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 app = Flask(__name__)
 CORS(app)  # Enable CORS for communication with your Electron app
 
-# Example endpoint to receive text prompts
-@app.route('/prompt', methods=['POST'])
+class PromptPayload(BaseModel):
+    text: str
+    user_id: str
+
+@app.route('/chat', methods=['POST'])
 def handle_prompt():
-    data = request.get_json()
-    user_prompt = data.get("prompt")
-    user_id = data.get("user_id")  # Use this to associate with a Supabase user
+    try:
+        data = PromptPayload(**request.get_json())
+    except ValidationError as e:
+        return jsonify({"status": "error", "message": "Invalid payload", "errors": e.errors()}), 400
     
-    # Example: Insert a new operation record into Supabase
-    # In a real app, you might first create or update a chat record, then create an operation.
-    operation_data = {
-        "chat_id": None,  # Replace with an actual chat id or create a new chat record
-        "operation_type": "create_circle",
-        "parameters": {"radius": 10},
-        "status": "pending"
-    }
-    response = supabase.table("operations").insert(operation_data).execute()
+    response = supabase.table("operations").insert({
+        "text": data.text,
+        "user_id": data.user_id,
+    }).execute()
+
+    openai.api_key = os.getenv("OPENAI_API_KEY")
+
+    chat_response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "You are a helpful assistant."},
+            {"role": "user", "content": data.text},
+        ]
+    )
+
+    assistant_message = chat_response["choices"][0]["message"]["content"]
+    print("ChatGPT response:", assistant_message)
     
     # You can also add logic here to process the prompt using AI/NLP
     return jsonify({"status": "success", "operation": response.data})

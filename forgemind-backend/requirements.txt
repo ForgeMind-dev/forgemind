@@ -9,6 +9,7 @@ blinker==1.9.0
 certifi==2025.1.31
 click==8.1.8
 deprecation==2.1.0
+distro==1.9.0
 exceptiongroup==1.2.2
 Flask==3.1.0
 Flask-Cors==5.0.0
@@ -24,8 +25,10 @@ hyperframe==6.1.0
 idna==3.10
 itsdangerous==2.2.0
 Jinja2==3.1.5
+jiter==0.8.2
 MarkupSafe==3.0.2
 multidict==6.1.0
+openai==1.63.2
 packaging==24.2
 postgrest==0.19.3
 propcache==0.2.1
@@ -40,6 +43,7 @@ storage3==0.11.3
 StrEnum==0.4.15
 supabase==2.13.0
 supafunc==0.9.3
+tqdm==4.67.1
 typing_extensions==4.12.2
 websockets==14.2
 Werkzeug==3.1.3
