@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 import os
 from supabase import create_client, Client
 from pydantic import BaseModel, ValidationError
-import openai
+from openai import OpenAI
 
 # Load environment variables from .env file
 load_dotenv()
@@ -15,39 +15,44 @@ load_dotenv()
 SUPABASE_URL = os.getenv("REACT_APP_SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("REACT_APP_SUPABASE_ANON_KEY")
 
+# Get OpenAI API key from environment variables
+client = OpenAI(
+    api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
+)
+
 # Create a Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 app = Flask(__name__)
 CORS(app)  # Enable CORS for communication with your Electron app
 
-class PromptPayload(BaseModel):
+class ChatPayload(BaseModel):
     text: str
     user_id: str
 
 @app.route('/chat', methods=['POST'])
-def handle_prompt():
+def chat():
     try:
-        data = PromptPayload(**request.get_json())
+        data = ChatPayload(**request.get_json())
     except ValidationError as e:
         return jsonify({"status": "error", "message": "Invalid payload", "errors": e.errors()}), 400
     
-    response = supabase.table("operations").insert({
+    response = supabase.table("chats").insert({
         "text": data.text,
         "user_id": data.user_id,
     }).execute()
 
-    openai.api_key = os.getenv("OPENAI_API_KEY")
+    chat_completion = client.chat.completions.create(
+    messages=[
+        {
+            "role": "user",
+            "content": "Say this is a test",
+        }
+    ],
+    model="gpt-4o",
+)
 
-    chat_response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": data.text},
-        ]
-    )
-
-    assistant_message = chat_response["choices"][0]["message"]["content"]
+    assistant_message = chat_completion.choices[0].message.content
     print("ChatGPT response:", assistant_message)
     
     # You can also add logic here to process the prompt using AI/NLP
