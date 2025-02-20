@@ -80,10 +80,8 @@ def chat():
 
 @app.route('/poll', methods=['GET'])
 def poll():
+    # return "app = adsk.core.Application.get()\nui = app.userInterface\n\ndesign = app.activeProduct\nrootComp = design.rootComponent\nsketches = rootComp.sketches\nxyPlane = rootComp.xYConstructionPlane\nsketch = sketches.add(xyPlane)\n\ncircles = sketch.sketchCurves.sketchCircles\nlines = sketch.sketchCurves.sketchLines\n\n# Draw a star using lines\ncenterPoint = adsk.core.Point3D.create(0, 0, 0)\npoints = []\nnum_points = 5\nouter_radius = 4\ninner_radius = 2\n\nfor i in range(num_points * 2):\n    angle = math.pi / num_points * i  # Twice the number of points for the star\n    if i % 2 == 0:\n        radius = outer_radius\n    else:\n        radius = inner_radius\n    x = radius * math.cos(angle)\n    y = radius * math.sin(angle)\n    points.append(adsk.core.Point3D.create(x, y, 0))\n\nfor i in range(len(points)):\n    line = lines.addByTwoPoints(points[i], points[(i + 2) % len(points)])"
     return "app = adsk.core.Application.get()\nui = app.userInterface\nui.messageBox('Hi')"
-    # return """
-    # app = adsk.core.Application.get()\nui = app.userInterface\ndesign = app.activeProduct\nrootComp = design.rootComponent\nsketches = rootComp.sketches\nxyPlane = rootComp.xYConstructionPlane\nsketch = sketches.add(xyPlane)\n\ncircles = sketch.sketchCurves.sketchCircles\nlines = sketch.sketchCurves.sketchLines\n\n# Draw a star using lines\ncenterPoint = adsk.core.Point3D.create(0, 0, 0)\npoints = []\nnum_points = 5\nouter_radius = 4\ninner_radius = 2\n\nfor i in range(num_points * 2):\n    angle = math.pi / num_points * i  # Twice the number of points for the star\n    if i % 2 == 0:\n        radius = outer_radius\n    else:\n        radius = inner_radius\n    x = radius * math.cos(angle)\n    y = radius * math.sin(angle)\n    points.append(adsk.core.Point3D.create(x, y, 0))\n\nfor i in range(len(points)):\n    line = lines.addByTwoPoints(points[i], points[(i + 2) % len(points)])\nprint('foo 2')\n
-    # """
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
