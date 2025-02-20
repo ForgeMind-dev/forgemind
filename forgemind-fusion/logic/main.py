@@ -1,32 +1,38 @@
 import adsk.core, adsk.fusion, traceback
 from adsk.core import Application, UserInterface
+from ..lib import fusionAddInUtils as futil
 
-def run_logic():
+def run_logic(logic: str):
     ui = None
     try:
-        app = adsk.core.Application.get()
-        ui = app.userInterface
+        # futil.log('FURGO 1 running logic')
+        # exec(logic)
+        futil.log('FURGO 2 running logic')
+        futil.log(logic)
+        exec(logic)
+        # app = adsk.core.Application.get()
+        # ui = app.userInterface
         
-        # doc = app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
+        # # doc = app.documents.add(adsk.core.DocumentTypes.FusionDesignDocumentType)
         
-        design = app.activeProduct
+        # design = app.activeProduct
 
-        # Get the root component of the active design.
-        rootComp = design.rootComponent
+        # # Get the root component of the active design.
+        # rootComp = design.rootComponent
 
-        # Create a new sketch on the xy plane.
-        sketches = rootComp.sketches
-        xyPlane = rootComp.xYConstructionPlane
-        sketch = sketches.add(xyPlane)
+        # # Create a new sketch on the xy plane.
+        # sketches = rootComp.sketches
+        # xyPlane = rootComp.xYConstructionPlane
+        # sketch = sketches.add(xyPlane)
 
-        # Draw some circles.
-        circles = sketch.sketchCurves.sketchCircles
+        # # Draw some circles.
+        # circles = sketch.sketchCurves.sketchCircles
 
-        circle1 = circles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), 2)
-        circle2 = circles.addByCenterRadius(adsk.core.Point3D.create(8, 3, 0), 3)
+        # circle1 = circles.addByCenterRadius(adsk.core.Point3D.create(0, 0, 0), 2)
+        # circle2 = circles.addByCenterRadius(adsk.core.Point3D.create(8, 3, 0), 3)
 
-        # Add a circle at the center of one of the existing circles.
-        circle3 = circles.addByCenterRadius(circle2.centerSketchPoint, 4)
+        # # Add a circle at the center of one of the existing circles.
+        # circle3 = circles.addByCenterRadius(circle2.centerSketchPoint, 4)
         
     except:
         if ui:

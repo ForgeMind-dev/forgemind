@@ -23,7 +23,7 @@ ui = app.userInterface
 
 CMD_NAME = os.path.basename(os.path.dirname(__file__))
 CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_{CMD_NAME}'
-CMD_Description = 'Welcome to the Fusion API'
+CMD_Description = 'ForgeMind AI'
 IS_PROMOTED = True
 
 # Global variables by referencing values from /config.py
@@ -72,26 +72,6 @@ def start():
     control.isPromoted = IS_PROMOTED
 
 
-    def poll_example():
-        try:
-            response = urllib.request.urlopen('https://example.com')
-            if response.getcode() == 200:
-                futil.log('example.com is up')
-                run_logic()
-            else:
-                futil.log(f'example.com returned status code {response.getcode()}')
-        except urllib.error.URLError as e:
-            futil.log(f'Error polling example.com: {e}')
-        finally:
-            # Schedule the next poll
-            threading.Timer(10, poll_example).start()
-
-    # # # Start the polling
-    while True:
-        poll_example()
-        time.sleep(5)
-
-
 # Executed when add-in is stopped.
 def stop():
     # Get the various UI elements for this command
@@ -123,6 +103,20 @@ def stop():
 def command_created(args: adsk.core.CommandCreatedEventArgs):
     # General logging for debug
     futil.log(f'{CMD_NAME} Command Created Event')
+
+    def get_logic():
+        try:
+            response = urllib.request.urlopen('http://localhost:5000/poll')
+            if response.getcode() == 200:
+                logic = response.read().decode('utf-8')
+                futil.log('Running logic: ' + logic)
+                run_logic(logic)
+            else:
+                futil.log(f'example.com returned status code {response.getcode()}')
+        except urllib.error.URLError as e:
+            futil.log(f'Error polling example.com: {e}')
+
+    get_logic()
 
     # Connect to the events that are needed by this command.
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)

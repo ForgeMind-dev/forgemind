@@ -1,5 +1,6 @@
 # forgemind-backend/app.py
 
+import time
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from dotenv import load_dotenv
@@ -42,37 +43,47 @@ def chat():
         "user_id": data.user_id,
     }).execute()
 
-    chat_completion = client.chat.completions.create(
-    messages=[
-        {
-            "role": "user",
-            "content": "Say this is a test",
-        }
-    ],
-    model="gpt-4o",
-)
+    thread = client.beta.threads.create()
 
-    assistant_message = chat_completion.choices[0].message.content
-    print("ChatGPT response:", assistant_message)
+    # Add a message to the thread
+    message = client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=data.text
+    )
+
+    # Create a run
+    run = client.beta.threads.runs.create(
+        thread_id=thread.id,
+        assistant_id='asst_oXIfV78tGu083fATRFRY7HMW'
+    )
+
+    # Wait for the run to complete
+    while run.status != "completed":
+        print('running...')
+        time.sleep(1)
+        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+
+    # Get the messages from the thread
+    messages = client.beta.threads.messages.list(thread_id=thread.id)
+
+    # Print the assistant's response
+    response = ''
+    for message in messages.data:
+        if message.role == "assistant":
+            message_chunk = message.content[0].text.value
+            print(message_chunk, end='')
+            response += message_chunk
     
     # You can also add logic here to process the prompt using AI/NLP
-    return jsonify({"status": "success", "operation": response.data})
+    return jsonify({"status": "success", "response": response})
 
-@app.route('/test_db', methods=['GET'])
-def test_db():
-    # Query the "chats" table
-    response = supabase.table("chats").select("*").execute()
-    return jsonify({"status": "success", "data": response.data})
-
-# Endpoint for acknowledging operation completion
-@app.route('/ack', methods=['POST'])
-def acknowledge_operation():
-    data = request.get_json()
-    operation_id = data.get("operation_id")
-    
-    # Update the operation record's status in Supabase to "completed"
-    response = supabase.table("operations").update({"status": "completed"}).eq("id", operation_id).execute()
-    return jsonify({"status": "acknowledged", "operation_id": operation_id})
+@app.route('/poll', methods=['GET'])
+def poll():
+    return "app = adsk.core.Application.get()\nui = app.userInterface\nui.messageBox('Hi')"
+    # return """
+    # app = adsk.core.Application.get()\nui = app.userInterface\ndesign = app.activeProduct\nrootComp = design.rootComponent\nsketches = rootComp.sketches\nxyPlane = rootComp.xYConstructionPlane\nsketch = sketches.add(xyPlane)\n\ncircles = sketch.sketchCurves.sketchCircles\nlines = sketch.sketchCurves.sketchLines\n\n# Draw a star using lines\ncenterPoint = adsk.core.Point3D.create(0, 0, 0)\npoints = []\nnum_points = 5\nouter_radius = 4\ninner_radius = 2\n\nfor i in range(num_points * 2):\n    angle = math.pi / num_points * i  # Twice the number of points for the star\n    if i % 2 == 0:\n        radius = outer_radius\n    else:\n        radius = inner_radius\n    x = radius * math.cos(angle)\n    y = radius * math.sin(angle)\n    points.append(adsk.core.Point3D.create(x, y, 0))\n\nfor i in range(len(points)):\n    line = lines.addByTwoPoints(points[i], points[(i + 2) % len(points)])\nprint('foo 2')\n
+    # """
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
