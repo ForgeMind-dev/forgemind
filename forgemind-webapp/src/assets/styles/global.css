@@ -9,17 +9,17 @@
 
 html, body {
   font-family: 'Inter', sans-serif;
-  background-color: #000; /* Black background */
-  color: #fff;           /* White text */
+  background-color: #ffc0cb; /* Pink background */
+  color: #ffc0cb;           /* Pink text */
   line-height: 1.6;
   font-size: 16px;
 }
 
 /* CSS Variables for consistency */
 :root {
-  --primary-color: #fff;   /* White text for primary elements */
-  --secondary-color: #000; /* Black background for secondary elements */
-  --accent-color: #ccc;    /* A light grey for hover effects and accents */
+  --primary-color: #ffc0cb;   /* Pink for primary elements */
+  --secondary-color: #ffc0cb; /* Pink for secondary elements */
+  --accent-color: #ffc0cb;    /* Pink for hover effects and accents */
   --max-width: 1200px;
 }
 
@@ -35,22 +35,20 @@ body {
   padding-top: 80px; /* Adjust if your header height changes */
 }
 
-
 @media (max-width: 768px) {
-    html {
-      font-size: 14px;
-    }
-    
-    .hero-content h1 {
-      font-size: 3rem;
-    }
-    
-    .features-section h2,
-    .cta-section h2,
-    .team-section h2,
-    .testimonials-section h2 {
-      font-size: 2rem;
-    }
+  html {
+    font-size: 14px;
   }
   
+  .hero-content h1 {
+    font-size: 3rem;
+  }
   
+  .features-section h2,
+  .cta-section h2,
+  .team-section h2,
+  .testimonials-section h2 {
+    font-size: 2rem;
+  }
+}
+
