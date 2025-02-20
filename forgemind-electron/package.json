@@ -1,6 +1,7 @@
 {
   "name": "forgemind-electron",
   "author": "ForgeMind.dev",
+  "homepage": "./",
   "description": "ForgeMind Electron App",
   "version": "0.1.0",
   "private": true,
@@ -59,7 +60,7 @@
     },
     "files": [
       "build/**/*",
-      "dist/main/**/*",
+      "build/main/**/*",
       "package.json"
     ],
     "win": {

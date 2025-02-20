@@ -3,6 +3,9 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 
+// Helper to check if we're in dev mode
+const isDev = !app.isPackaged;
+
 function createWindow(): void {
   const win = new BrowserWindow({
     width: 1280,
@@ -12,12 +15,12 @@ function createWindow(): void {
     },
   });
 
-  // Load your local web server or a local build file.
-  // For development, you can point to localhost:3000 (where React runs):
-  win.loadURL('http://localhost:3000');
-
-  // Optionally, remove the menu bar for a cleaner look:
-  // win.removeMenu();
+  if (isDev) {
+    win.loadURL('http://localhost:3000');
+  } else {
+    // Prefer loadFile for local HTML
+    win.loadFile(path.join(app.getAppPath(), 'build', 'index.html'));
+  }
 }
 
 app.whenReady().then(() => {
