@@ -16,6 +16,7 @@ from ... import config
 from ...logic import run_logic
 from ...lib import fusionAddInUtils as futil
 import threading
+import json
 import urllib.request
 
 app = adsk.core.Application.get()
@@ -108,7 +109,9 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
         try:
             response = urllib.request.urlopen('http://127.0.0.1:5000/poll')
             if response.getcode() == 200:
-                logic = response.read().decode('utf-8')
+                response_data = response.read().decode('utf-8')
+                json_data = json.loads(response_data)
+                logic = json_data.get("instructions", "")
                 futil.log('Running logic:\n------------START--------\n' + logic+'\n------------END--------')
                 run_logic(logic)
             else:

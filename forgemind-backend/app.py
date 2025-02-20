@@ -8,6 +8,7 @@ import os
 from supabase import create_client, Client
 from pydantic import BaseModel, ValidationError
 from openai import OpenAI
+import re
 
 # Load environment variables from .env file
 load_dotenv()
@@ -41,6 +42,7 @@ def chat():
     chat_insertion = supabase.table("chats").insert({
         "text": data.text,
         "user_id": data.user_id,
+        "assistant_id": "asst_oXIfV78tGu083fATRFRY7HMW"
     }).execute()
 
     thread = client.beta.threads.create()
@@ -76,22 +78,34 @@ def chat():
             assistant_response += message_chunk
     
     insert_operation = supabase.table("operations").insert({
-        "instruction": assistant_response,
-        "chat_id": chat_insertion["data"][0]["id"],
+        "instructions": assistant_response,
+        "chat_id": chat_insertion.data[0]["id"],
         "user_id": data.user_id,
         "cad_type": "fusion",
         "status": "pending",
     }).execute()
     
-    # You can also add logic here to process the prompt using AI/NLP
-    return jsonify({"status": "success", "response": chat_insertion})
+    return jsonify({"status": "success", "response": assistant_response})
 
 @app.route('/poll', methods=['GET'])
 def poll():
-    # [AI generated] Works
-    # "app = adsk.core.Application.get()\nui = app.userInterface\ndesign = app.activeProduct\nrootComp = design.rootComponent\nsketches = rootComp.sketches\nui.messageBox('Furgo 0')\nxyPlane = rootComp.xYConstructionPlane\nui.messageBox('Furgo 1')\nsketch = sketches.add(xyPlane)\nui.messageBox('Furgo 2')\ncircles = sketch.sketchCurves.sketchCircles\nui.messageBox('Furgo 3')\nlines = sketch.sketchCurves.sketchLines\nui.messageBox('Furgo 4')\ncenterPoint = adsk.core.Point3D.create(0, 0, 0)\nui.messageBox('Furgo 5')\nui.messageBox('Furgo 6')\npoints = []\nui.messageBox('Furgo 7')\nnum_points = 5\nui.messageBox('Furgo 8')\nouter_radius = 4\nui.messageBox('Furgo 9')\ninner_radius = 2\nui.messageBox('Furgo 10')\nfor i in range(num_points * 2):\n    ui.messageBox('FUCK THE POLICE')\n    angle = (math.pi / num_points * i)\n    ui.messageBox('Furgo 11')\n    if i % 2 == 0:\n        radius = outer_radius\n    else:\n        radius = inner_radius\n    x = radius * math.cos(angle)\n    y = radius * math.sin(angle)\n    points.append(adsk.core.Point3D.create(x, y, 0))\n\nfor i in range(len(points)):\n    line = lines.addByTwoPoints(points[i], points[(i + 2) % len(points)])"
     print('polling...')
-    return 
+    # Retrieve one pending operation
+    pending_ops = supabase.table("operations").select("*").eq("status", "pending").limit(1).execute()
+    if not pending_ops.data:
+        return jsonify({"status": "error", "message": "No pending operation found"}), 404
+
+    operation = pending_ops.data[0]
+
+    # Update its status to "sent"
+    supabase.table("operations").update({"status": "sent"}).eq("id", operation["id"]).execute()
+
+    # Return the instructions from the operation
+    instructions = operation["instructions"]
+    pattern = r"```(?:python)?\s*([\s\S]*?)\s*```"
+    match = re.search(pattern, instructions)
+    cleaned_instructions = match.group(1) if match else instructions.strip()
+    return jsonify({"status": "success", "instructions": cleaned_instructions})
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)
