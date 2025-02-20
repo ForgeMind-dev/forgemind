@@ -1,23 +1,10 @@
 # forgemind-webapp
 This is the source code for [www.forgemind.dev](https://www.forgemind.dev)
 
-## Available Scripts
-
-In the project directory, you can run:
-
-### `npm start`
-
-Runs the app in development mode at [http://localhost:3000](http://localhost:3000).
-
-### `npm test`
-
-Launches the test runner in interactive watch mode.
-
-### `npm run build`
-
-Builds the app for production to the `build` folder.
-
-### `npm run eject`
-
-**Note: this is a one-way operation. Once you `eject`, you can’t go back!**
-
+1. Install [nvm](https://github.com/nvm-sh/nvm) or [nvm-windows](https://github.com/coreybutler/nvm-windows)
+2. Install node v20.13.1: `nvm install 20.13.1`
+3. use node v20.13.1 `nvm use 20.13.1`
+4. Install dependencies: `npm install`
+5. Start: `npm run start`
+6. Test: `npm run test`
+7. Build: `npm run build`

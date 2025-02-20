@@ -16,6 +16,7 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({ onClose }) => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Insert the waitlist data into the Supabase table called 'waitlist'
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { data, error } = await supabase
       .from('waitlist')
       .insert([{ email, job_title: jobTitle, cad_experience: cadExperience }]);

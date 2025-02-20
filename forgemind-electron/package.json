@@ -4,7 +4,7 @@
   "description": "ForgeMind Electron App",
   "version": "0.1.0",
   "private": true,
-  "main": "dist/main/main.js",
+  "main": "build/main/main.js",
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build && tsc -p tsconfig.json",

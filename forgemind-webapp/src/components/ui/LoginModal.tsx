@@ -59,7 +59,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
         {message && (
           <p className="login-message">
             {message}{' '}
-            <a
+            <button
               className="waitlist-link"
               onClick={() => {
                 onClose();
@@ -68,7 +68,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
               style={{ cursor: 'pointer' }}
             >
               Join Waitlist
-            </a>
+            </button>
           </p>
         )}
       </div>
