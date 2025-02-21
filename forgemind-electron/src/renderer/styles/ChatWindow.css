@@ -36,21 +36,24 @@
   /* Message bubble styles */
 /* Message bubbles */
 .msg {
-  white-space: pre-wrap;
+  display: inline-block;          /* Ensures the bubble width adjusts to text */
+  max-width: 60%;                /* Wrap long text, leaving some space on the side */
+  padding: 7px 10px;             /* Less top/bottom padding for a shorter bubble */
+  border-radius: 15px;
+  margin-bottom: 1px;            /* Slightly smaller gap between messages */
+  white-space: pre-wrap;         
   word-wrap: break-word;
   overflow-wrap: break-word;
-  max-width: 90%;
-  padding: 12px;
-  border-radius: 6px;
-  margin-bottom: 8px;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 1.1;              /* Slightly reduced line spacing */
 }
   
 .ai-msg {
-  text-align: left;
-  background-color: #333; /* dark gray bubble */
+  align-self: flex-start;          /* bubble on the left */
+  background-color: #333;          /* dark gray bubble */
   color: #fff;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
+  text-align: left;
 }
   
   .ai-msg strong {
@@ -59,11 +62,11 @@
   
   .ai-msg ol, .ai-msg ul {
     padding-left: 20px;
+    margin: 8px 3px;
   }
   
   .ai-msg li {
     margin-bottom: 5px;
-    list-style-type: decimal;
   }
   
   .ai-msg ul li {
@@ -72,12 +75,31 @@
   
   .ai-msg p {
     margin: 0 0 10px;
-    line-height: 1.5;
+  }
+
+  .loading-bubble {
+    display: flex;
+    align-items: center;
   }
   
-  .user-msg {
-    align-self: flex-end;
-    background-color: #444; /* slightly different bubble color */
-    color: #fff;
-  }
+  /* AI text styling: centered, no bubble, clean markdown display */
+.ai-text {
+  text-align: center;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  color: #fff;
+  margin: 8px 0;
+}
+
+/* User message bubble remains on the right */
+.user-msg {
+  align-self: flex-end;
+  background-color: #7a96ee;
+  color: #fff;
+  padding: 10px;
+  border-radius: 15px;
+  max-width: 50%;
+  margin-bottom: 8px;
+}
+
   

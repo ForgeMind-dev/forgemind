@@ -46,6 +46,8 @@ const App: React.FC = () => {
   const [chosenCAD, setChosenCAD] = useState<string>("");
   const [customCAD, setCustomCAD] = useState<string>("");
 
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   const containerClass = sidebarOpen ? "app-container sidebar-open" : "app-container";
@@ -65,22 +67,38 @@ const App: React.FC = () => {
     const userMsg: Message = { role: "user", content: text };
     const updatedChats = [...chats];
     updatedChats[activeChatIndex] = {
-      ...currentChat,
-      messages: [...currentChat.messages, userMsg],
+      ...updatedChats[activeChatIndex],
+      messages: [...updatedChats[activeChatIndex].messages, userMsg],
     };
     setChats(updatedChats);
     setInput("");
 
+    setIsLoading(true);
+
     try {
       const response = await sendPrompt(text, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
-      
       const assistantReply = response.response;
-      const assistantMsg: Message = { role: "assistant", content: assistantReply };
 
+      // Check if the reply is a script
+      const isScript =
+        assistantReply.includes("function") ||
+        assistantReply.includes("import") ||
+        assistantReply.includes("const ") ||
+        assistantReply.includes("let ") ||
+        assistantReply.includes("var ");
+
+      // Replace script with a friendly message
+      const finalReply = isScript
+        ? "Done, do you need anything else?"
+        : assistantReply;
+
+      const assistantMsg: Message = { role: "assistant", content: finalReply };
+
+      // Append the assistant message to the updated chat
       const finalChats = [...updatedChats];
       finalChats[activeChatIndex] = {
-        ...currentChat,
-        messages: [...currentChat.messages, assistantMsg],
+        ...finalChats[activeChatIndex],
+        messages: [...finalChats[activeChatIndex].messages, assistantMsg],
       };
       setChats(finalChats);
     } catch (err) {
@@ -88,10 +106,12 @@ const App: React.FC = () => {
       const errorMsg: Message = { role: "assistant", content: "Sorry, something went wrong." };
       const finalChats = [...updatedChats];
       finalChats[activeChatIndex] = {
-        ...currentChat,
-        messages: [...updatedChats[activeChatIndex].messages, errorMsg],
+        ...finalChats[activeChatIndex],
+        messages: [...finalChats[activeChatIndex].messages, errorMsg],
       };
       setChats(finalChats);
+    } finally {
+      setIsLoading(false);
     }
   }
 
@@ -183,7 +203,12 @@ const App: React.FC = () => {
           )}
         </div>
 
-        <ChatWindow chats={chats} activeChatIndex={activeChatIndex} fullLogo={fullLogo} />
+        <ChatWindow
+          chats={chats}
+          activeChatIndex={activeChatIndex}
+          fullLogo={fullLogo}
+          isLoading={isLoading}
+        />
 
         <BottomBar
           input={input}
