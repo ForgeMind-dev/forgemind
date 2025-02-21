@@ -8,6 +8,7 @@ import ConnectCADModal from "./components/ConnectCADModal";
 import OptimizeModal from "./components/OptimizeModal";
 import RefineModal from "./components/RefineModal";
 import RelationsModal from "./components/RelationsModal";
+import { sendPrompt } from "./api";
 
 // Import modular CSS
 import "./styles/reset.css";
@@ -53,7 +54,7 @@ const App: React.FC = () => {
 
   function handleNewChat() {
     const newChat: Chat = { name: `Chat ${chats.length + 1}`, messages: [] };
-    setChats((prev) => [...prev, newChat]);
+    setChats([...chats, newChat]);
     setActiveChatIndex(chats.length);
   }
 
@@ -71,70 +72,23 @@ const App: React.FC = () => {
     setInput("");
 
     try {
-      const cadInfo = chosenCAD
-        ? ` You are currently connected to ${chosenCAD === "Other" && customCAD ? customCAD : chosenCAD}.`
-        : " You are not currently connected to any CAD software.";
-
-      const res = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          messages: [
-            {
-              role: "system",
-              content: `
-                You are ForgeMind AI, a specialized mechanical and CAD design assistant. 
-                ForgeMind AI includes its own wizards/features, such as:
-                 • "Optimize Tolerances"
-                 • "Refine Curved Surfaces"
-                 • "View Part Relations"
-                 • "Crash Analysis"
-                These are built-in ForgeMind capabilities, not part of any external CAD software.
-
-                The user can also connect to an external CAD (like CATIA, NX, SolidWorks, Fusion 360).
-                You may reference these CAD tools for specific modeling or simulation modules, 
-                but please keep in mind that ForgeMind wizards (e.g. "Refine Curved Surfaces") 
-                are separate, internal ForgeMind features that integrate with whichever CAD is chosen.
-
-                Currently: ${cadInfo}
-
-                Always:
-                 • Clarify the user's goals and constraints.
-                 • Recommend relevant ForgeMind AI wizards or external CAD features, as needed.
-                 • Provide step-by-step design guidance or analysis steps.
-                 • End with a question or prompt to encourage further discussion, 
-                   unless it's clearly the final request.
-              `,
-            },
-            ...updatedChats[activeChatIndex].messages,
-          ],
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`OpenAI API error: ${res.status}`);
-      }
-
-      const data = await res.json();
-      const aiReply = data.choices?.[0]?.message?.content || "No response from AI.";
-      const assistantMsg: Message = { role: "assistant", content: aiReply };
+      const response = await sendPrompt(text, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
+      
+      const assistantReply = response.response;
+      const assistantMsg: Message = { role: "assistant", content: assistantReply };
 
       const finalChats = [...updatedChats];
       finalChats[activeChatIndex] = {
-        ...updatedChats[activeChatIndex],
-        messages: [...updatedChats[activeChatIndex].messages, assistantMsg],
+        ...currentChat,
+        messages: [...currentChat.messages, assistantMsg],
       };
       setChats(finalChats);
     } catch (err) {
-      console.error("OpenAI API Error:", err);
+      console.error("API error:", err);
       const errorMsg: Message = { role: "assistant", content: "Sorry, something went wrong." };
       const finalChats = [...updatedChats];
       finalChats[activeChatIndex] = {
-        ...updatedChats[activeChatIndex],
+        ...currentChat,
         messages: [...updatedChats[activeChatIndex].messages, errorMsg],
       };
       setChats(finalChats);
@@ -236,16 +190,29 @@ const App: React.FC = () => {
           setInput={setInput}
           onSend={handleSend}
           logoIcon={logoIcon}
-          onOptimize={handleOptimizeClick}
-          onRefine={handleRefineClick}
-          onRelations={handleRelationsClick}
+          onOptimize={() => {
+            setShowOptimizeModal(true);
+            setOptimizeStep(1);
+            setConstraintsInput("");
+          }}
+          onRefine={() => {
+            setShowRefineModal(true);
+            setRefineStep(1);
+          }}
+          onRelations={() => {
+            setShowRelationsModal(true);
+            setRelationsStep(1);
+          }}
         />
       </div>
 
       {showCADPopup && (
         <ConnectCADModal
-          onSelectCAD={handleSelectCAD}
-          onClose={handleCloseCADPopup}
+          onSelectCAD={(cad) => {
+            setChosenCAD(cad);
+            setShowCADPopup(false);
+          }}
+          onClose={() => setShowCADPopup(false)}
         />
       )}
 

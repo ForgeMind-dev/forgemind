@@ -26,14 +26,23 @@ client = OpenAI(
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for communication with your Electron app
+# Explicitly allow all origins and support credentials
+CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 
 class ChatPayload(BaseModel):
     text: str
     user_id: str
 
-@app.route('/chat', methods=['POST'])
+@app.route('/chat', methods=['OPTIONS', 'POST'])
 def chat():
+    # Handle preflight OPTIONS request
+    if request.method == 'OPTIONS':
+        response = jsonify({"status": "ok"})
+        response.headers.add("Access-Control-Allow-Origin", "*")
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type,Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "GET,POST,OPTIONS")
+        return response
+
     try:
         data = ChatPayload(**request.get_json())
     except ValidationError as e:
@@ -69,7 +78,7 @@ def chat():
     # Get the messages from the thread
     messages = client.beta.threads.messages.list(thread_id=thread.id)
 
-    # Print the assistant's response
+    # Accumulate the assistant's response
     assistant_response = ''
     for message in messages.data:
         if message.role == "assistant":
