@@ -169,6 +169,11 @@ const App: React.FC = () => {
     setShowCADPopup(false);
   };
 
+  const handleDisconnectCAD = () => {
+    setChosenCAD("");
+    setCustomCAD("");
+  };
+
   return (
     <div className="app-wrapper">
       <Header
@@ -176,10 +181,7 @@ const App: React.FC = () => {
         chosenCAD={chosenCAD}
         customCAD={customCAD}
         onConnectClick={handleOpenCADPopup}
-        onDisconnectClick={() => {
-          setChosenCAD("");
-          setCustomCAD("");
-        }}
+        onDisconnectClick={handleDisconnectCAD}
       />
 
       <Sidebar
