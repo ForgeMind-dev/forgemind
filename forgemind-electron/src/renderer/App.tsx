@@ -57,10 +57,39 @@ const App: React.FC = () => {
   const currentChat = chats[activeChatIndex];
 
   function handleNewChat() {
-    const newChat: Chat = { name: `Chat ${chats.length + 1}`, messages: [] };
+    // 1. Collect the numeric suffixes from all *visible* chats (Chat X).
+    const usedNumbers: number[] = [];
+    for (const chat of chats) {
+      // Skip hidden chats
+      if (chat.visible === false) continue;
+  
+      // Parse out the number if it matches "Chat X"
+      const match = chat.name.match(/^Chat\s+(\d+)$/);
+      if (match) {
+        usedNumbers.push(parseInt(match[1], 10));
+      }
+    }
+  
+    // 2. Sort them
+    usedNumbers.sort((a, b) => a - b);
+  
+    // 3. Find the smallest missing number, starting at 1
+    let nextNumber = 1;
+    for (const num of usedNumbers) {
+      if (num === nextNumber) {
+        nextNumber++;
+      } else if (num > nextNumber) {
+        // We found a gap, so break
+        break;
+      }
+    }
+  
+    // 4. Create the new chat using that number
+    const newChat: Chat = { name: `Chat ${nextNumber}`, messages: [] };
     setChats([...chats, newChat]);
     setActiveChatIndex(chats.length);
   }
+  
 
   async function handleSend() {
     const text = input.trim();
@@ -183,25 +212,24 @@ const App: React.FC = () => {
   };
 
   function handleDeleteChat(index: number) {
-    const updatedChats = [...chats];
-    updatedChats.splice(index, 1);
+    // Map over chats and set visible to false for the selected chat
+    const updatedChats = chats.map((chat, i) =>
+      i === index ? { ...chat, visible: false } : chat
+    );
+    setChats(updatedChats);
 
-    // If we deleted the currently active chat, adjust the activeChatIndex
+    // If the active chat is being hidden, update activeChatIndex to the first visible chat (if any)
     if (index === activeChatIndex) {
-      // If there are no chats left, create a new one or set active to 0
-      if (updatedChats.length === 0) {
+      const firstVisibleIndex = updatedChats.findIndex(chat => chat.visible !== false);
+      if (firstVisibleIndex >= 0) {
+        setActiveChatIndex(firstVisibleIndex);
+      } else {
+        // If no chat is visible, optionally create a new default chat
         const newChat: Chat = { name: "Chat 1", messages: [] };
         setChats([newChat]);
         setActiveChatIndex(0);
-        return;
       }
-
-      // Otherwise, set active to the previous chat or 0 if we deleted the first one
-      const newIndex = Math.min(index, updatedChats.length - 1);
-      setActiveChatIndex(newIndex);
     }
-
-    setChats(updatedChats);
   }
 
   return (
@@ -211,20 +239,22 @@ const App: React.FC = () => {
         showLogo={chats[activeChatIndex].messages.length > 0}
       />
 
-      {sidebarOpen && (
-        <Sidebar
-          chats={chats}
-          activeChatIndex={activeChatIndex}
-          setActiveChatIndex={setActiveChatIndex}
-          onNewChat={handleNewChat}
-          onDeleteChat={handleDeleteChat}
-          onOptimize={handleOptimizeClick}
-          onRefine={handleRefineClick}
-          onRelations={handleRelationsClick}
-          onSuggestCAD={handleSuggestCAD}
-          onCrashAnalysis={handleCrashAnalysis}
-        />
-      )}
+      <div className={sidebarOpen ? "sidebar open" : "sidebar closed"}>
+        {sidebarOpen && (
+          <Sidebar
+            chats={chats}
+            activeChatIndex={activeChatIndex}
+            setActiveChatIndex={setActiveChatIndex}
+            onNewChat={handleNewChat}
+            onDeleteChat={handleDeleteChat}
+            onOptimize={handleOptimizeClick}
+            onRefine={handleRefineClick}
+            onRelations={handleRelationsClick}
+            onSuggestCAD={handleSuggestCAD}
+            onCrashAnalysis={handleCrashAnalysis}
+          />
+        )}
+      </div>
 
       <div className={containerClass} style={{ marginTop: "50px" }}>
         <ChatWindow

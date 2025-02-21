@@ -11,12 +11,12 @@
   background-color: #000; /* black */
 }
   .main-logo {
-    width: 400px;
+    width: 300px;
     height: auto;
     margin-bottom: 40px;
   }
   .center-content h1 {
-    font-size: 24px;
+    font-size: 17px;
     color: #fff; /* white text */
   }
   

@@ -1,4 +1,3 @@
-// src/renderer/components/Sidebar.tsx
 import React from "react";
 import { Chat } from "../types";
 import "../styles/Sidebar.css";
@@ -29,6 +28,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   onCrashAnalysis,
   onDeleteChat,
 }) => {
+  // Only render chats that are visible (or where visible is undefined)
+  const visibleChats = chats.filter(chat => chat.visible !== false);
+
   return (
     <div className="sidebar">
       <button className="new-chat-btn" onClick={onNewChat}>
@@ -37,7 +39,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       <h2>Chats</h2>
       <ul>
-        {chats.map((chat, idx) => (
+        {visibleChats.map((chat, idx) => (
           <li
             key={idx}
             className={idx === activeChatIndex ? "active-chat" : ""}
@@ -50,7 +52,9 @@ const Sidebar: React.FC<SidebarProps> = ({
                 className="delete-chat-btn"
                 onClick={(e) => {
                   e.stopPropagation();
-                  onDeleteChat(idx);
+                  // Find the original index in the full chats array
+                  const originalIndex = chats.findIndex(c => c === chat);
+                  onDeleteChat(originalIndex);
                 }}
               >
                 <img src={trashBinIcon} alt="Delete Chat" className="delete-icon" />

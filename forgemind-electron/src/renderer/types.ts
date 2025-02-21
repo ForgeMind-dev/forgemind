@@ -8,5 +8,7 @@ export interface Message {
   export interface Chat {
     name: string;
     messages: Message[];
+    visible?: boolean; // if false, hide this chat in the UI
   }
+  
   
