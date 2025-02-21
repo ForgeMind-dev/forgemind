@@ -48,4 +48,23 @@
     cursor: pointer;
     margin-left: 8px;
   }
+  .chat-bubble-textarea {
+    resize: none; 
+    overflow: hidden; /* let autoResize control the height */
+    width: 100%;
+    border: none;
+    background: transparent;
+    color: #fff;
+    font-size: 14px;
+    font-family: 'Inter', sans-serif; /* or your desired font */
+    line-height: 1.4;
+    outline: none; /* remove the orange outline on focus */
+    white-space: pre-wrap; /* ensures newlines appear properly */
+  }
+  
+  .chat-bubble-textarea:focus {
+    outline: none; /* no focus outline */
+  }
+  
+  
   

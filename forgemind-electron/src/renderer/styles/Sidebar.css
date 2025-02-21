@@ -6,14 +6,15 @@
   top: 60px;
   left: 0;
   width: 250px;
-  height: calc(100% - 60px);
+  height: calc(100% - 70px);
   background-color: #000;
   color: #fff;
   border-right: 1px solid #444;
-  padding: 16px;
+  padding: 0 16px 16px;
   overflow-y: auto;
   z-index: 9999;
 }
+
 
 .new-chat-btn {
   width: 100%;
@@ -23,8 +24,9 @@
   border-radius: 4px;
   padding: 8px;
   cursor: pointer;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
+
 .new-chat-btn:hover {
   background-color: #5377ef;
 }
@@ -110,4 +112,16 @@
 }
 .quick-actions button:hover {
   background-color: #555;
+}
+
+/* When the sidebar is open, show normally */
+.sidebar.open {
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+}
+
+/* When the sidebar is closed, slide it out of view */
+.sidebar.closed {
+  transform: translateX(-100%);
+  transition: transform 0.3s ease;
 }

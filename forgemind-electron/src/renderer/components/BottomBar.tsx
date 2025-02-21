@@ -1,9 +1,8 @@
-// src/renderer/components/BottomBar.tsx
-import React, { KeyboardEvent } from 'react';
+import React, { KeyboardEvent, Dispatch, SetStateAction, useRef } from "react";
 
 interface BottomBarProps {
   input: string;
-  setInput: (value: string) => void;
+  setInput: Dispatch<SetStateAction<string>>;
   onSend: () => void;
   logoIcon: string;
 }
@@ -14,8 +13,41 @@ const BottomBar: React.FC<BottomBarProps> = ({
   onSend,
   logoIcon,
 }) => {
-  const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") onSend();
+  const textAreaRef = useRef<HTMLTextAreaElement>(null);
+
+  const autoResize = () => {
+    if (textAreaRef.current) {
+      // Reset height to auto to shrink it first
+      textAreaRef.current.style.height = "auto";
+      // Then set it to scrollHeight to expand
+      textAreaRef.current.style.height = textAreaRef.current.scrollHeight + "px";
+    }
+  };
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter") {
+      if (e.shiftKey) {
+        e.preventDefault();
+        setInput((prev) => prev + "\n");
+        // After adding a newline, adjust the height
+        requestAnimationFrame(autoResize);
+      } else {
+        e.preventDefault();
+        onSend();
+        // Reset input and shrink
+        setTimeout(() => {
+          if (textAreaRef.current) {
+            textAreaRef.current.style.height = "auto";
+          }
+        }, 0);
+      }
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setInput(e.target.value);
+    // auto-resize after user types
+    autoResize();
   };
 
   return (
@@ -24,12 +56,14 @@ const BottomBar: React.FC<BottomBarProps> = ({
         <div className="chat-bubble-icon">
           <img src={logoIcon} alt="Chat Icon" className="chat-icon-img" />
         </div>
-        <input
-          className="chat-bubble-input"
+        <textarea
+          ref={textAreaRef}
+          className="chat-bubble-textarea"
           placeholder="Start building with ForgeMind..."
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={handleChange}
           onKeyDown={handleKeyDown}
+          rows={1}
         />
         <button className="chat-bubble-send-btn" onClick={onSend}>
           &#9658;
