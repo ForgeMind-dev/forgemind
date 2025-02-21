@@ -33,6 +33,7 @@ def run_logic(logic: str):
         # # Add a circle at the center of one of the existing circles.
         # circle3 = circles.addByCenterRadius(circle2.centerSketchPoint, 4)
         
-    except:
+    except Exception as error:
+        futil.log('Error: ' + str(error))
         if ui:
             ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
