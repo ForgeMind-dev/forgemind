@@ -15,7 +15,8 @@
     background-color: #000; /* black */
     margin-left: 0px;     /* so content starts after the 250px sidebar */
     transition: margin-left 0.3s ease;
-    /* Remove .sidebar-open logic if you want the sidebar always visible */
+    display: flex;
+    flex-direction: column;
   }
   .app-container.sidebar-open {
     margin-left: 250px; /* match sidebar width */
