@@ -2,10 +2,10 @@
 
 .bottom-bar {
   position: absolute;
-  bottom: 0;
+  bottom: 1000;
   width: 100%;
   background-color: #000; /* black bar */
-  padding: 16px;
+  padding: 8px;
   box-shadow: 0 -1px 3px rgba(255, 255, 255, 0.1); /* subtle white shadow */
 }
   

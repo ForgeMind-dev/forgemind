@@ -1,6 +1,7 @@
 // src/renderer/App.tsx
 
 import React, { useState } from "react";
+import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import BottomBar from "./components/BottomBar";
@@ -18,6 +19,7 @@ import "./styles/ChatWindow.css";
 import "./styles/BottomBar.css";
 import "./styles/modal.css";
 import "./styles/Sidebar.css";
+import "./styles/Header.css";
 
 import fullLogo from "./assets/full_logo.png";
 import logoIcon from "./assets/logo_icon.png";
@@ -169,6 +171,17 @@ const App: React.FC = () => {
 
   return (
     <div className="app-wrapper">
+      <Header
+        onToggleSidebar={toggleSidebar}
+        chosenCAD={chosenCAD}
+        customCAD={customCAD}
+        onConnectClick={handleOpenCADPopup}
+        onDisconnectClick={() => {
+          setChosenCAD("");
+          setCustomCAD("");
+        }}
+      />
+
       <Sidebar
         chats={chats}
         activeChatIndex={activeChatIndex}
@@ -176,33 +189,7 @@ const App: React.FC = () => {
         onNewChat={handleNewChat}
       />
 
-      <div className={containerClass}>
-        <button className="menu-btn" onClick={toggleSidebar}>
-          &#9776;
-        </button>
-        <div className="cad-connection-container">
-          {!chosenCAD ? (
-            <button className="connect-cad-btn" onClick={handleOpenCADPopup}>
-              Connect
-            </button>
-          ) : (
-            <div className="chosen-cad-controls">
-              <button className="chosen-cad-btn" onClick={handleOpenCADPopup}>
-                {chosenCAD === "Other" && customCAD ? customCAD : chosenCAD}
-              </button>
-              <button
-                className="disconnect-cad-btn"
-                onClick={() => {
-                  setChosenCAD("");
-                  setCustomCAD("");
-                }}
-              >
-                Disconnect
-              </button>
-            </div>
-          )}
-        </div>
-
+      <div className={containerClass} style={{ marginTop: "50px" }}>
         <ChatWindow
           chats={chats}
           activeChatIndex={activeChatIndex}
