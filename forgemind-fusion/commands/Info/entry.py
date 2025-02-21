@@ -52,12 +52,13 @@ def get_logic():
             futil.log('Running logic:\n------------START--------\n' + logic+'\n------------END--------')
             run_logic(logic)
         else:
-            futil.log(f'backend returned status code {response.getcode()}')
+            pass # Do nothing, this is okay
+            # futil.log(f'backend returned status code {response.getcode()}')
     except urllib.error.URLError as e:
         # ui.messageBox("[ForgeMind] Something went wrong.")
-        futil.log(f'Error polling backend: {e}')
+        # futil.log(f'Error polling backend: {e}')
+        pass # Do nothing, this is okay
 
-# New function to run get_logic every 10 seconds.
 def schedule_get_logic():
     get_logic()
     threading.Timer(1, schedule_get_logic).start()

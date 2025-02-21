@@ -4,23 +4,39 @@
 const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 /**
- * Sends a user prompt to the backend via the /chat endpoint.
- * @param text The text prompt (e.g., "create a circle")
+ * Creates a new thread via the /create_thread endpoint.
  * @param userId The user's ID (from Supabase Auth)
  */
-export async function sendPrompt(text: string, userId: string) {
+export async function createThread(userId: string): Promise<{ thread_id: string }> {
+  const response = await fetch(`${API_BASE_URL}/create_thread`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ user_id: userId })
+  });
+  return response.json();
+}
+
+/**
+ * Sends a user prompt to the backend via the / chat endpoint.
+ * @param text The text prompt(e.g., "create a circle")
+    * @param userId The user's ID (from Supabase Auth)
+      */
+export async function sendPrompt(text: string, userId: string, threadId: string) {
+  console.log('sendPrompt', text, userId, threadId);
   const response = await fetch(`${API_BASE_URL}/chat`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ text, user_id: userId })
+    body: JSON.stringify({ text, user_id: userId, thread_id: threadId })
   });
 
   if (!response.ok) {
     throw new Error(`Error sending prompt: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -40,7 +56,7 @@ export async function acknowledgeOperation(operationId: string) {
   if (!response.ok) {
     throw new Error(`Error acknowledging operation: ${response.statusText}`);
   }
-  
+
   return response.json();
 }
 
@@ -58,6 +74,23 @@ export async function pollOperation() {
   if (!response.ok) {
     throw new Error(`Error polling for operation: ${response.statusText}`);
   }
-  
+
+  return response.json();
+}
+
+/**
+ * Retrieves existing threads via the /getThreads endpoint.
+ */
+export async function getThreads(user_id: string): Promise<any[]> {
+  const response = await fetch(`${API_BASE_URL}/get_threads`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ user_id })
+  });
+  if (!response.ok) {
+    throw new Error(`Error fetching threads: ${response.statusText}`);
+  }
   return response.json();
 }

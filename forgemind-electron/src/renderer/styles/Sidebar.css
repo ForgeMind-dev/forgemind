@@ -3,7 +3,7 @@
 /* Dark sidebar background with white text */
 .sidebar {
   position: absolute;
-  top: 0;
+  top: 100px;
   left: 0;
   width: 250px;
   height: 100%;

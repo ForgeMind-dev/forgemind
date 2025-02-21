@@ -1,6 +1,6 @@
 // src/renderer/App.tsx
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
@@ -9,7 +9,7 @@ import ConnectCADModal from "./components/ConnectCADModal";
 import OptimizeModal from "./components/OptimizeModal";
 import RefineModal from "./components/RefineModal";
 import RelationsModal from "./components/RelationsModal";
-import { sendPrompt } from "./api";
+import { createThread, sendPrompt, getThreads } from "./api";
 
 // Import modular CSS
 import "./styles/reset.css";
@@ -30,9 +30,10 @@ const MODEL = "gpt-4o";
 
 const App: React.FC = () => {
   const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
-  const [chats, setChats] = useState<Chat[]>([{ name: "Chat 1", messages: [] }]);
+  const [chats, setChats] = useState<Chat[]>([]);
   const [activeChatIndex, setActiveChatIndex] = useState<number>(0);
   const [input, setInput] = useState<string>("");
+  const [threadId, setThreadId] = useState<string>("");
 
   const [showCADPopup, setShowCADPopup] = useState<boolean>(false);
   const [showOptimizeModal, setShowOptimizeModal] = useState<boolean>(false);
@@ -56,8 +57,32 @@ const App: React.FC = () => {
 
   const currentChat = chats[activeChatIndex];
 
-  function handleNewChat() {
-    const newChat: Chat = { name: `Chat ${chats.length + 1}`, messages: [] };
+  useEffect(() => {
+    async function fetchThreads() {
+      try {
+        const threads = await getThreads("c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
+        if (threads.length === 0) {
+          const newThread = await createThread("c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
+          const initialChat: Chat = { name: "Chat 1", messages: [], threadId: newThread.thread_id };
+          console.log('FURGO new thread', newThread);
+          setThreadId(newThread.thread_id);
+          setChats([initialChat]);
+          setActiveChatIndex(0);
+        } else {
+          // Map threads response to Chat type if necessary.
+          setChats(threads);
+          setActiveChatIndex(0);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchThreads();
+  }, []);
+
+  async function handleNewChat() {
+    const newThread = await createThread("c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
+    const newChat: Chat = { name: `Chat ${chats.length + 1}`, messages: [], threadId: newThread.thread_id };
     setChats([...chats, newChat]);
     setActiveChatIndex(chats.length);
   }
@@ -70,7 +95,7 @@ const App: React.FC = () => {
     const updatedChats = [...chats];
     updatedChats[activeChatIndex] = {
       ...updatedChats[activeChatIndex],
-      messages: [...updatedChats[activeChatIndex].messages, userMsg],
+      messages: [...updatedChats[activeChatIndex].messages ?? [], userMsg],
     };
     setChats(updatedChats);
     setInput("");
@@ -78,7 +103,7 @@ const App: React.FC = () => {
     setIsLoading(true);
 
     try {
-      const response = await sendPrompt(text, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
+      const response = await sendPrompt(text, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b", threadId);
       const assistantReply = response.response;
 
       // Check if the reply is a script
@@ -192,12 +217,12 @@ const App: React.FC = () => {
       />
 
       <div className={containerClass} style={{ marginTop: "50px" }}>
-        <ChatWindow
+        {chats.length && <ChatWindow
           chats={chats}
           activeChatIndex={activeChatIndex}
           fullLogo={fullLogo}
           isLoading={isLoading}
-        />
+        />}
 
         <BottomBar
           input={input}

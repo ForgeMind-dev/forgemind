@@ -20,7 +20,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 
   // Get the most recent user message (if any)
   const lastUserMessage =
-    currentChat.messages.slice().reverse().find((msg) => msg.role === "user")?.content || "";
+    currentChat.messages?.slice().reverse().find((msg) => msg.role === "user")?.content || "";
   // Determine the base text based on the first word of the last user message.
   const baseText =
     lastUserMessage.trim().split(' ')[0].toLowerCase() === "design"
@@ -43,7 +43,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     };
   }, [isLoading, baseText]);
 
-  if (currentChat.messages.length === 0) {
+  if ((currentChat.messages?.length ?? 0) === 0) {
     return (
       <div className="center-content">
         <img src={fullLogo} alt="ForgeMind Logo" className="main-logo" />
