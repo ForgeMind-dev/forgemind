@@ -3,51 +3,28 @@ import fullLogo from "../assets/full_logo.png";
 
 interface HeaderProps {
   onToggleSidebar: () => void;
-  chosenCAD: string;
-  customCAD: string;
-  onConnectClick: () => void;
-  onDisconnectClick: () => void;
+  showLogo: boolean;
 }
 
-const Header: React.FC<HeaderProps> = ({
-  onToggleSidebar,
-  chosenCAD,
-  customCAD,
-  onConnectClick,
-  onDisconnectClick,
-}) => {
-  // If "Other" is chosen and user typed a custom name, use that; otherwise use chosenCAD
-  const cadName = chosenCAD === "Other" && customCAD ? customCAD : chosenCAD;
-
+const Header: React.FC<HeaderProps> = ({ onToggleSidebar, showLogo }) => {
   return (
     <header className="header-container">
-      {/* Sidebar toggle (hamburger) on the left */}
+      {/* Menu button, absolutely positioned on the left */}
       <button className="menu-btn" onClick={onToggleSidebar}>
         &#9776;
       </button>
 
-      {/* ForgeMind Logo in the center */}
+      {/* Centered logo (by default, because the container uses justify-content: center) */}
       <div className="header-logo">
-        <img src={fullLogo} alt="ForgeMind Logo" />
-      </div>
-
-      {/* Connect/Disconnect CAD on the right */}
-      <div className="header-right">
-        {!chosenCAD ? (
-          <button className="connect-cad-btn" onClick={onConnectClick}>
-            Connect
-          </button>
+        {showLogo ? (
+          <img src={fullLogo} alt="ForgeMind Logo" />
         ) : (
-          <div className="chosen-cad-controls">
-            <button className="chosen-cad-btn" onClick={onConnectClick}>
-              {cadName}
-            </button>
-            <button className="disconnect-cad-btn" onClick={onDisconnectClick}>
-              Disconnect
-            </button>
-          </div>
+          <div style={{ height: "40px", width: "40px" }}></div>
         )}
       </div>
+
+      {/* Right side placeholder, absolutely positioned on the right */}
+      <div className="header-right"></div>
     </header>
   );
 };

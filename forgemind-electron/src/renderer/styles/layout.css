@@ -40,3 +40,56 @@
     display: flex;
   }
   
+  /* Responsive adjustments for small window sizes */
+@media (max-width: 800px) and (max-height: 300px) {
+  /* Adjust header logo size */
+  .header-logo img {
+    height: 24px;
+  }
+  
+  /* Adjust chat bubble styling */
+  .msg {
+    padding: 4px 8px;
+    font-size: 12px;
+    max-width: 90%;
+  }
+  
+  /* Landing page logo on chat window */
+  .center-content .main-logo {
+    width: 200px;
+    margin-bottom: 20px;
+  }
+  
+  /* Sidebar adjustments */
+  .sidebar {
+    width: 150px;
+    padding: 8px;
+  }
+  .new-chat-btn {
+    padding: 6px;
+    font-size: 12px;
+  }
+  .sidebar h2 {
+    font-size: 14px;
+  }
+  .sidebar ul li {
+    font-size: 12px;
+  }
+  
+  /* Quick Tools buttons */
+  .quick-actions button {
+    padding: 4px 8px;
+    font-size: 12px;
+  }
+  
+  /* Bottom Bar adjustments */
+  .chat-bubble {
+    padding: 4px 8px;
+  }
+  .chat-bubble-input {
+    font-size: 12px;
+  }
+  .chat-bubble-send-btn {
+    font-size: 16px;
+  }
+}

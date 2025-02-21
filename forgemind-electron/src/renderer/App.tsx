@@ -81,7 +81,6 @@ const App: React.FC = () => {
       const response = await sendPrompt(text, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
       const assistantReply = response.response;
 
-      // Check if the reply is a script
       const isScript =
         assistantReply.includes("function") ||
         assistantReply.includes("import") ||
@@ -89,14 +88,12 @@ const App: React.FC = () => {
         assistantReply.includes("let ") ||
         assistantReply.includes("var ");
 
-      // Replace script with a friendly message
       const finalReply = isScript
         ? "Done, do you need anything else?"
         : assistantReply;
 
       const assistantMsg: Message = { role: "assistant", content: finalReply };
 
-      // Append the assistant message to the updated chat
       const finalChats = [...updatedChats];
       finalChats[activeChatIndex] = {
         ...finalChats[activeChatIndex],
@@ -174,22 +171,60 @@ const App: React.FC = () => {
     setCustomCAD("");
   };
 
+  // New Quick Tool Handlers
+  const handleSuggestCAD = () => {
+    console.log("Suggest a CAD Tool clicked");
+    // Add your logic here
+  };
+
+  const handleCrashAnalysis = () => {
+    console.log("Run Crash Analysis clicked");
+    // Add your logic here
+  };
+
+  function handleDeleteChat(index: number) {
+    const updatedChats = [...chats];
+    updatedChats.splice(index, 1);
+
+    // If we deleted the currently active chat, adjust the activeChatIndex
+    if (index === activeChatIndex) {
+      // If there are no chats left, create a new one or set active to 0
+      if (updatedChats.length === 0) {
+        const newChat: Chat = { name: "Chat 1", messages: [] };
+        setChats([newChat]);
+        setActiveChatIndex(0);
+        return;
+      }
+
+      // Otherwise, set active to the previous chat or 0 if we deleted the first one
+      const newIndex = Math.min(index, updatedChats.length - 1);
+      setActiveChatIndex(newIndex);
+    }
+
+    setChats(updatedChats);
+  }
+
   return (
     <div className="app-wrapper">
       <Header
         onToggleSidebar={toggleSidebar}
-        chosenCAD={chosenCAD}
-        customCAD={customCAD}
-        onConnectClick={handleOpenCADPopup}
-        onDisconnectClick={handleDisconnectCAD}
+        showLogo={chats[activeChatIndex].messages.length > 0}
       />
 
-      <Sidebar
-        chats={chats}
-        activeChatIndex={activeChatIndex}
-        setActiveChatIndex={setActiveChatIndex}
-        onNewChat={handleNewChat}
-      />
+      {sidebarOpen && (
+        <Sidebar
+          chats={chats}
+          activeChatIndex={activeChatIndex}
+          setActiveChatIndex={setActiveChatIndex}
+          onNewChat={handleNewChat}
+          onDeleteChat={handleDeleteChat}
+          onOptimize={handleOptimizeClick}
+          onRefine={handleRefineClick}
+          onRelations={handleRelationsClick}
+          onSuggestCAD={handleSuggestCAD}
+          onCrashAnalysis={handleCrashAnalysis}
+        />
+      )}
 
       <div className={containerClass} style={{ marginTop: "50px" }}>
         <ChatWindow
@@ -204,19 +239,6 @@ const App: React.FC = () => {
           setInput={setInput}
           onSend={handleSend}
           logoIcon={logoIcon}
-          onOptimize={() => {
-            setShowOptimizeModal(true);
-            setOptimizeStep(1);
-            setConstraintsInput("");
-          }}
-          onRefine={() => {
-            setShowRefineModal(true);
-            setRefineStep(1);
-          }}
-          onRelations={() => {
-            setShowRelationsModal(true);
-            setRelationsStep(1);
-          }}
         />
       </div>
 

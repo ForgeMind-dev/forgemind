@@ -1,92 +1,82 @@
 .header-container {
-    position: fixed;            /* Stays at the top */
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 60px;
-    background-color: #000;     /* Black background */
-    border-bottom: 1px solid #333; /* Thin gray line at the bottom */
-    z-index: 9999;              /* Ensure it is above other elements */
-  
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 16px;
-  }
-  
-  /* Sidebar toggle button */
-  .menu-btn {
-    background: none;
-    color: #fff;
-    border: none;
-    font-size: 24px;
-    cursor: pointer;
-  }
-  
-  /* Centered ForgeMind logo */
-  .header-logo {
-    flex: 1;                      /* pushes logo to center */
-    display: flex;
-    justify-content: center;
-  }
-  .header-logo img {
-    height: 40px; /* Adjust as needed */
-  }
-  
-  /* Right side (Connect/Disconnect CAD) */
-  .header-right {
-    display: flex;
-    align-items: center;
-  }
-  
-  /* CONNECT BUTTON (top-right) */
-  .connect-cad-btn {
-    background-color: #a9c1f2;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
-    font-size: 14px;
-    cursor: pointer;
-  }
-  .connect-cad-btn:hover {
-    background-color: #7a96ee;
-  }
-  
-  /* If CAD is chosen, show side-by-side controls */
-  .chosen-cad-controls {
-    display: flex;
-    gap: 8px; /* spacing between chosen CAD and Disconnect buttons */
-  }
-  
-  /* Chosen CAD button */
-  .chosen-cad-btn {
-    background-color: #7a96ee;
-    color: #fff;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
-    cursor: pointer;
-  }
-  .chosen-cad-btn:hover {
-    background-color: #7a96ee;
-  }
-  
-  /* Disconnect button */
-  .disconnect-cad-btn {
-    background-color: #eee;
-    color: #333;
-    border: none;
-    border-radius: 4px;
-    padding: 8px 16px;
-    cursor: pointer;
-  }
-  .disconnect-cad-btn:hover {
-    background-color: #ccc;
-  }
-  
-  .cad-name {
-    color: #fff;
-    font-size: 14px;
-  }
-  
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background-color: #000;     /* black background */
+  border-bottom: 1px solid #333;
+  z-index: 9999;
+
+  display: flex;
+  align-items: center;
+  justify-content: center; /* The entire container is centered content */
+}
+
+/* Menu button on the left */
+.menu-btn {
+  position: absolute;
+  left: 16px;
+  background: none;
+  color: #fff;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Logo remains in normal flow, thus centered by the container */
+.header-logo img {
+  height: 40px;
+}
+
+/* If you have a right side container */
+.header-right {
+  position: absolute;
+  right: 16px;
+  display: flex;
+  align-items: center;
+}
+
+/* Example button styles (unchanged) */
+.connect-cad-btn {
+  background-color: #a9c1f2;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.connect-cad-btn:hover {
+  background-color: #7a96ee;
+}
+.chosen-cad-controls {
+  display: flex;
+  gap: 8px;
+}
+.chosen-cad-btn {
+  background-color: #7a96ee;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.chosen-cad-btn:hover {
+  background-color: #7a96ee;
+}
+.disconnect-cad-btn {
+  background-color: #eee;
+  color: #333;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+}
+.disconnect-cad-btn:hover {
+  background-color: #ccc;
+}
+.cad-name {
+  color: #fff;
+  font-size: 14px;
+}

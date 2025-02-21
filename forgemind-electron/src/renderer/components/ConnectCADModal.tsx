@@ -14,7 +14,7 @@ const ConnectCADModal: React.FC<ConnectCADModalProps> = ({ onSelectCAD, onClose 
         <h2>Connect to CAD</h2>
         <p>Choose a CAD software:</p>
         <div className="cad-grid">
-          <div className="cad-card" onClick={() => onSelectCAD("CATIA")}>
+          <div className="cad-card" onClick={() => onSelectCAD("forge-catia_v1")}>
             CATIA
           </div>
           <div className="cad-card" onClick={() => onSelectCAD("Solidworks")}>

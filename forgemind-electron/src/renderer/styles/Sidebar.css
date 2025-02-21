@@ -1,24 +1,23 @@
 /* Sidebar.css */
 
-/* Dark sidebar background with white text */
+/* Existing Sidebar Styles */
 .sidebar {
-  position: absolute;
-  top: 0;
+  position: fixed;
+  top: 60px;
   left: 0;
   width: 250px;
-  height: 100%;
-  background-color: #000;  /* black */
-  color: #fff;             /* white text */
-  border-right: 1px solid #444; /* subtle dark border */
+  height: calc(100% - 60px);
+  background-color: #000;
+  color: #fff;
+  border-right: 1px solid #444;
   padding: 16px;
   overflow-y: auto;
-  z-index: 0; /* ensure it’s on top of main content */
+  z-index: 9999;
 }
 
-/* Button for new chat */
 .new-chat-btn {
   width: 100%;
-  background-color: #444; /* dark gray button */
+  background-color: #7a96ee;
   color: #fff;
   border: none;
   border-radius: 4px;
@@ -26,9 +25,8 @@
   cursor: pointer;
   margin-bottom: 16px;
 }
-
 .new-chat-btn:hover {
-  background-color: #666; /* slightly lighter hover */
+  background-color: #5377ef;
 }
 
 .sidebar h2 {
@@ -46,16 +44,70 @@
 
 .sidebar ul li {
   margin-bottom: 8px;
-  cursor: pointer;
   padding: 4px;
-  color: #ccc; /* slightly lighter text for list items */
 }
 
-.sidebar ul li:hover {
-  color: #fff; /* highlight on hover */
+/* Chat item container for each chat list item */
+.chat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
+/* Chat name styling */
+.chat-name {
+  flex: 1;
+  cursor: pointer;
+  color: #cccccc;
+}
+.chat-name:hover {
+  color: #fff;
+}
+
+/* Active chat bubble styling */
 .active-chat {
+  background-color: #222;    /* Dark background for active bubble */
+  border-radius: 15px;
+  padding: 6px 8px;
+  
+}
+.active-chat .chat-name {
+  color: #fff;
   font-weight: bold;
-  color: #fff; /* highlight the active chat more strongly */
+}
+
+/* Delete chat button using trash bin icon */
+.delete-chat-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+.delete-chat-btn .delete-icon {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+/* Quick Tools Section */
+.quick-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.quick-actions button {
+  width: 100%;
+  text-align: left;
+  background-color: #333;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+.quick-actions button:hover {
+  background-color: #555;
 }

@@ -1,5 +1,4 @@
 // src/renderer/components/BottomBar.tsx
-
 import React, { KeyboardEvent } from 'react';
 
 interface BottomBarProps {
@@ -7,9 +6,6 @@ interface BottomBarProps {
   setInput: (value: string) => void;
   onSend: () => void;
   logoIcon: string;
-  onOptimize: () => void;
-  onRefine: () => void;
-  onRelations: () => void;
 }
 
 const BottomBar: React.FC<BottomBarProps> = ({
@@ -17,9 +13,6 @@ const BottomBar: React.FC<BottomBarProps> = ({
   setInput,
   onSend,
   logoIcon,
-  onOptimize,
-  onRefine,
-  onRelations,
 }) => {
   const handleKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") onSend();
@@ -27,19 +20,6 @@ const BottomBar: React.FC<BottomBarProps> = ({
 
   return (
     <div className="bottom-bar">
-      <div className="quick-actions">
-        <button className="quick-pill">Suggest a CAD Tool</button>
-        <button className="quick-pill" onClick={onOptimize}>
-          Optimize Tolerances
-        </button>
-        <button className="quick-pill" onClick={onRefine}>
-          Refine Curved Surfaces
-        </button>
-        <button className="quick-pill">Run Crash Analysis</button>
-        <button className="quick-pill" onClick={onRelations}>
-          View Part Relations
-        </button>
-      </div>
       <div className="chat-bubble">
         <div className="chat-bubble-icon">
           <img src={logoIcon} alt="Chat Icon" className="chat-icon-img" />
