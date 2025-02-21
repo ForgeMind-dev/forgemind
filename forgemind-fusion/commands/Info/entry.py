@@ -42,6 +42,25 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resource
 # Holds references to event handlers
 local_handlers = []
 
+def get_logic():
+    try:
+        response = urllib.request.urlopen('http://127.0.0.1:5000/poll')
+        if response.getcode() == 200:
+            response_data = response.read().decode('utf-8')
+            json_data = json.loads(response_data)
+            logic = json_data.get("instructions", "")
+            futil.log('Running logic:\n------------START--------\n' + logic+'\n------------END--------')
+            run_logic(logic)
+        else:
+            futil.log(f'backend returned status code {response.getcode()}')
+    except urllib.error.URLError as e:
+        # ui.messageBox("[ForgeMind] Something went wrong.")
+        futil.log(f'Error polling backend: {e}')
+
+# New function to run get_logic every 10 seconds.
+def schedule_get_logic():
+    get_logic()
+    threading.Timer(1, schedule_get_logic).start()
 
 # Executed when add-in is run.
 def start():
@@ -71,6 +90,9 @@ def start():
 
     # Now you can set various options on the control such as promoting it to always be shown.
     control.isPromoted = IS_PROMOTED
+
+    # Start the recurring get_logic calls every 10 seconds.
+    threading.Timer(0, schedule_get_logic).start()
 
 
 # Executed when add-in is stopped.
@@ -104,23 +126,6 @@ def stop():
 def command_created(args: adsk.core.CommandCreatedEventArgs):
     # General logging for debug
     futil.log(f'{CMD_NAME} Command Created Event')
-
-    def get_logic():
-        try:
-            response = urllib.request.urlopen('http://127.0.0.1:5000/poll')
-            if response.getcode() == 200:
-                response_data = response.read().decode('utf-8')
-                json_data = json.loads(response_data)
-                logic = json_data.get("instructions", "")
-                futil.log('Running logic:\n------------START--------\n' + logic+'\n------------END--------')
-                run_logic(logic)
-            else:
-                futil.log(f'backend returned status code {response.getcode()}')
-        except urllib.error.URLError as e:
-            ui.messageBox("[ForgeMind] Something went wrong.")
-            futil.log(f'Error polling backend: {e}')
-
-    get_logic()
 
     # Connect to the events that are needed by this command.
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
