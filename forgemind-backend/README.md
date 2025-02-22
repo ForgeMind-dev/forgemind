@@ -8,7 +8,7 @@
    - Windows (PowerShell): `pyenv install 3.10.12`
 3. Activate Python 3.10.12 for the shell:
    - macOS/Linux: `pyenv shell 3.10.12`
-   - Windows (PowerShell): `pyenv global 3.10.12` (or `pyenv local 3.10.12` if per-project)
+   - Windows (PowerShell): `pyenv global 3.10.12` (or `pyenv local 3.10.12` if per-project) # 3.10.11 is the latest available version for Windows
 4. Set up a virtual environment:
    - `python -m venv venv`
 5. Activate the virtual environment:
