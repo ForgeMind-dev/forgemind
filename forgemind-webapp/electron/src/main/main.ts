@@ -94,10 +94,9 @@ function createWindow(): void {
     },
   });
 
-  // In development mode, load the local webapp on port 3000
   if (!app.isPackaged) {
     mainWindow.loadURL('http://localhost:3000');
   } else {
-    mainWindow.loadFile(path.join(app.getAppPath(), 'build', 'index.html'));
+    mainWindow.loadFile(path.join(app.getAppPath(), '..', 'build', 'index.html'));
   }
 }

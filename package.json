@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "build": "^0.1.4"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.5"
+  }
+}

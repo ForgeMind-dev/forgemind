@@ -75,7 +75,8 @@ forgemind
 │  │  │  ├─ global.d.ts
 │  │  │  ├─ index.tsx
 │  │  │  ├─ main
-│  │  │  │  └─ main.ts
+│  │  │  │  ├─ main.ts
+│  │  │  │  └─ preload.js
 │  │  │  └─ renderer
 │  │  │     ├─ api.ts
 │  │  │     ├─ App.tsx
@@ -161,6 +162,7 @@ forgemind
 │  │  │     ├─ WaitlistModal.css
 │  │  │     └─ WaitlistModal.tsx
 │  │  ├─ declarations.d.ts
+│  │  ├─ EmbeddedApp.tsx
 │  │  ├─ index.tsx
 │  │  ├─ pages
 │  │  │  ├─ Dashboard.css
@@ -169,6 +171,8 @@ forgemind
 │  │  │  └─ Home.tsx
 │  │  └─ supabaseClient.ts
 │  └─ tsconfig.json
+├─ package-lock.json
+├─ package.json
 └─ README.md
 
 ```

@@ -6,6 +6,7 @@ import Footer from './components/layout/Footer';
 import Dashboard from './pages/Dashboard';
 import LoginModal from './components/ui/LoginModal';
 import WaitlistModal from './components/ui/WaitlistModal';
+import EmbeddedApp from './EmbeddedApp';
 import './App.css';
 
 const App: React.FC = () => {
@@ -23,12 +24,13 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="App">
+    <>
       <Header onLoginClick={openLoginModal} />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/embedded" element={<EmbeddedApp />} />
         </Routes>
       </main>
       <Footer />
@@ -39,7 +41,7 @@ const App: React.FC = () => {
         />
       )}
       {showWaitlistModal && <WaitlistModal onClose={closeWaitlistModal} />}
-    </div>
+    </>
   );
 };
 
