@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { supabase } from '../../supabaseClient'; // Adjust path as needed
+import { supabase } from '../../supabaseClient';
+import { useNavigate } from 'react-router-dom';
 import './LoginModal.css';
 
 interface LoginModalProps {
@@ -12,6 +13,8 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
 
+  const navigate = useNavigate();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Use Supabase Auth to sign in with email and password
@@ -21,10 +24,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
     });
 
     if (error) {
-      setMessage("You don't have access yet. ");
+      setMessage("You don't have access yet.");
     } else {
-      // On successful login, redirect to the Dashboard page
-      window.location.href = '/dashboard';
+      onClose();
+      navigate('/dashboard');
     }
   };
 

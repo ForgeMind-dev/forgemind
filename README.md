@@ -9,6 +9,7 @@ This is the monorepo of ForgeMind. The reliability of this product is dependent 
 3. We do not have a testing process, so we have to keep a healthy environment.
 4. Make sure that you are modifying git history at the root level directory, not just within each subfolder (forgemind-electron, forgemind-backend, etc).
 5. As you begin to touch the CAD integrations, be extra careful to **READ THE FUCKING MANUAL**
+
 ```
 forgemind
 ├─ forgemind-backend
@@ -19,49 +20,6 @@ forgemind
 │  ├─ runtime.txt
 │  ├─ run_local_mac.sh
 │  └─ run_local_windows.ps1
-├─ forgemind-electron
-│  ├─ icons
-│  │  ├─ icon.icns
-│  │  ├─ icon.ico
-│  │  └─ icons.png
-│  ├─ package-lock.json
-│  ├─ package.json
-│  ├─ public
-│  │  ├─ electron.js
-│  │  └─ index.html
-│  ├─ README.md
-│  ├─ server.js
-│  ├─ src
-│  │  ├─ global.d.ts
-│  │  ├─ index.tsx
-│  │  ├─ main
-│  │  │  └─ main.ts
-│  │  └─ renderer
-│  │     ├─ App.tsx
-│  │     ├─ assets
-│  │     │  ├─ full_logo.png
-│  │     │  ├─ logo_icon.png
-│  │     │  └─ logo_icon1.png
-│  │     ├─ components
-│  │     │  ├─ BottomBar.tsx
-│  │     │  ├─ ChatWindow.tsx
-│  │     │  ├─ ConnectCADModal.tsx
-│  │     │  ├─ OptimizeModal.tsx
-│  │     │  ├─ RefineModal.tsx
-│  │     │  ├─ RelationsModal.tsx
-│  │     │  └─ Sidebar.tsx
-│  │     ├─ styles
-│  │     │  ├─ App.css
-│  │     │  ├─ BottomBar.css
-│  │     │  ├─ buttons.css
-│  │     │  ├─ ChatWindow.css
-│  │     │  ├─ global.css
-│  │     │  ├─ layout.css
-│  │     │  ├─ modal.css
-│  │     │  ├─ reset.css
-│  │     │  └─ Sidebar.css
-│  │     └─ types.ts
-│  └─ tsconfig.json
 ├─ forgemind-fusion
 │  ├─ AddInIcon.svg
 │  ├─ commands
@@ -101,6 +59,51 @@ forgemind
 │  └─ __pycache__
 │     └─ config.cpython-312.pyc
 ├─ forgemind-webapp
+│  ├─ electron
+│  │  ├─ icons
+│  │  │  ├─ icon.icns
+│  │  │  ├─ icon.ico
+│  │  │  └─ icons.png
+│  │  ├─ package-lock.json
+│  │  ├─ package.json
+│  │  ├─ public
+│  │  │  ├─ electron.js
+│  │  │  └─ index.html
+│  │  ├─ README.md
+│  │  ├─ server.js
+│  │  ├─ src
+│  │  │  ├─ global.d.ts
+│  │  │  ├─ index.tsx
+│  │  │  ├─ main
+│  │  │  │  └─ main.ts
+│  │  │  └─ renderer
+│  │  │     ├─ api.ts
+│  │  │     ├─ App.tsx
+│  │  │     ├─ assets
+│  │  │     │  ├─ full_logo.png
+│  │  │     │  ├─ logo_icon.png
+│  │  │     │  ├─ logo_icon1.png
+│  │  │     │  └─ trash_bin.png
+│  │  │     ├─ components
+│  │  │     │  ├─ BottomBar.tsx
+│  │  │     │  ├─ ChatWindow.tsx
+│  │  │     │  ├─ ConnectCADModal.tsx
+│  │  │     │  ├─ Header.tsx
+│  │  │     │  ├─ OptimizeModal.tsx
+│  │  │     │  ├─ RefineModal.tsx
+│  │  │     │  ├─ RelationsModal.tsx
+│  │  │     │  └─ Sidebar.tsx
+│  │  │     ├─ styles
+│  │  │     │  ├─ BottomBar.css
+│  │  │     │  ├─ buttons.css
+│  │  │     │  ├─ ChatWindow.css
+│  │  │     │  ├─ Header.css
+│  │  │     │  ├─ layout.css
+│  │  │     │  ├─ modal.css
+│  │  │     │  ├─ reset.css
+│  │  │     │  └─ Sidebar.css
+│  │  │     └─ types.ts
+│  │  └─ tsconfig.json
 │  ├─ package-lock.json
 │  ├─ package.json
 │  ├─ Procfile

@@ -8,7 +8,7 @@ import LoginModal from './components/ui/LoginModal';
 import WaitlistModal from './components/ui/WaitlistModal';
 import './App.css';
 
-function App() {
+const App: React.FC = () => {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
 
@@ -17,7 +17,6 @@ function App() {
   const openWaitlistModal = () => setShowWaitlistModal(true);
   const closeWaitlistModal = () => setShowWaitlistModal(false);
 
-  // When login fails, close the login modal and open the waitlist modal
   const handleOpenWaitlistFromLogin = () => {
     closeLoginModal();
     openWaitlistModal();
@@ -42,6 +41,6 @@ function App() {
       {showWaitlistModal && <WaitlistModal onClose={closeWaitlistModal} />}
     </div>
   );
-}
+};
 
 export default App;
