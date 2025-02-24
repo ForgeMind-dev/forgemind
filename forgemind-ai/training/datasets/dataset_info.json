@@ -1,0 +1,12 @@
+{
+    "dataset_name": {
+        "file_name": "text_to_fusion_python.json",
+        "columns": {
+            "prompt": "instruction",
+            "query": "input",
+            "response": "output",
+            "system": "system",
+            "history": "history"
+        }
+    }
+}
