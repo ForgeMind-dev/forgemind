@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Chat } from '../types';
 
@@ -17,16 +17,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
 }) => {
   const currentChat = chats[activeChatIndex];
   const [loadingText, setLoadingText] = useState("Designing");
+  
+  // 1. Ref for the messages container
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Get the most recent user message (if any)
+  // 2. Auto-scroll effect
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      // Scroll to the bottom
+      messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
+    }
+  }, [currentChat.messages, isLoading]);
+
+  // Determine the base text (Designing vs. Reasoning)
   const lastUserMessage =
     currentChat.messages.slice().reverse().find((msg) => msg.role === "user")?.content || "";
-  // Determine the base text based on the first word of the last user message.
   const baseText =
     lastUserMessage.trim().split(' ')[0].toLowerCase() === "design"
       ? "Designing"
       : "Reasoning";
 
+  // Animate the "Designing..." or "Reasoning..." text
   useEffect(() => {
     let interval: NodeJS.Timeout;
     if (isLoading) {
@@ -36,13 +47,12 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         setLoadingText(baseText + ".".repeat(dots));
       }, 500);
     } else {
-      setLoadingText(baseText); // Reset text when not loading
+      setLoadingText(baseText);
     }
-    return () => {
-      clearInterval(interval);
-    };
+    return () => clearInterval(interval);
   }, [isLoading, baseText]);
 
+  // If no messages yet, show landing
   if (currentChat.messages.length === 0) {
     return (
       <div className="center-content">
@@ -53,7 +63,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   }
 
   return (
-    <div className="messages-container">
+    <div ref={messagesEndRef} className="messages-container">
       {currentChat.messages.map((msg, idx) =>
         msg.role === "user" ? (
           <div key={idx} className="msg user-msg">
