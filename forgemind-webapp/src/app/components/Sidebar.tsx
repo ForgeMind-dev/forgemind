@@ -14,6 +14,7 @@ interface SidebarProps {
   onSuggestCAD: () => void;
   onCrashAnalysis: () => void;
   onDeleteChat: (index: number) => void;
+  isLoading: boolean;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({
@@ -27,14 +28,20 @@ const Sidebar: React.FC<SidebarProps> = ({
   onSuggestCAD,
   onCrashAnalysis,
   onDeleteChat,
+  isLoading,
 }) => {
   // Only render chats that are visible (or where visible is undefined)
   const visibleChats = chats.filter(chat => chat.visible !== false);
 
   return (
     <div className="sidebar">
-      <button className="new-chat-btn" onClick={onNewChat}>
-        + New Chat
+      <button 
+        className="new-chat-btn" 
+        onClick={onNewChat}
+        disabled={isLoading}
+        title={isLoading ? "Wait until the current chat is finished" : ""}
+      >
+        {isLoading ? "Processing..." : "+ New Chat"}
       </button>
 
       <h2>Chats</h2>

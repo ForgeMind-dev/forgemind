@@ -1,11 +1,14 @@
+// forgemind-webapp/src/pages/Dashboard.tsx
+
 import React from 'react';
+import ChatUI from '../app/AppUI'
 import './Dashboard.css';
 
 const Dashboard = () => {
   return (
     <div className="dashboard">
-      <h1>Welcome to ForgeMind</h1>
-      <p>You have successfully logged in!</p>
+      {/* You can keep a header or other UI elements here if needed */}
+      <ChatUI />
     </div>
   );
 };

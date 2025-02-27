@@ -1,42 +1,32 @@
-// src/main/main.ts
-
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 
-// Helper to check if we're in dev mode
 const isDev = !app.isPackaged;
 
-function createWindow(): void {
+async function createWindow(): Promise<void> {
   const win = new BrowserWindow({
     width: 1280,
     height: 800,
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      // preload: path.join(__dirname, 'preload.js'),
     },
   });
-
   if (isDev) {
-    win.loadURL('http://localhost:3000');
+    await win.loadURL('http://localhost:3000/#/dashboard');
   } else {
-    // Prefer loadFile for local HTML
-    win.loadFile(path.join(app.getAppPath(), 'build', 'index.html'));
-  }
+    const staticPath = path.join(process.resourcesPath, 'webapp-build', 'index.html');
+    // Use loadURL with a file protocol and append the hash for the dashboard route.
+    await win.loadURL(`file://${staticPath}#/dashboard`);
+  }  
 }
 
 app.whenReady().then(() => {
   createWindow();
-
   app.on('activate', () => {
-    // On macOS, re-create a window in the app when the dock icon is clicked
-    // and there are no other windows open.
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });
 });
 
 app.on('window-all-closed', () => {
-  // On macOS it is common for applications and their menu bar to stay active until
-  // the user quits explicitly with Cmd + Q
-  if (process.platform !== 'darwin') {
-    app.quit();
-  }
+  if (process.platform !== 'darwin') app.quit();
 });

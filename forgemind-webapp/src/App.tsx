@@ -17,12 +17,6 @@ function App() {
   const openWaitlistModal = () => setShowWaitlistModal(true);
   const closeWaitlistModal = () => setShowWaitlistModal(false);
 
-  // When login fails, close the login modal and open the waitlist modal
-  const handleOpenWaitlistFromLogin = () => {
-    closeLoginModal();
-    openWaitlistModal();
-  };
-
   return (
     <div className="App">
       <Header onLoginClick={openLoginModal} />
@@ -36,7 +30,7 @@ function App() {
       {showLoginModal && (
         <LoginModal
           onClose={closeLoginModal}
-          onOpenWaitlist={handleOpenWaitlistFromLogin}
+          onOpenWaitlist={openWaitlistModal}
         />
       )}
       {showWaitlistModal && <WaitlistModal onClose={closeWaitlistModal} />}
