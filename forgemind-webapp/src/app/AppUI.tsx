@@ -1,5 +1,3 @@
-// src/renderer/App.tsx
-
 import React, { useState } from "react";
 import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
@@ -52,11 +50,16 @@ const App: React.FC = () => {
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
+  // Use optional chaining to safely access messages
+  const showLogo = chats[activeChatIndex]?.messages?.length > 0;
   const containerClass = sidebarOpen ? "app-container sidebar-open" : "app-container";
 
-  const currentChat = chats[activeChatIndex];
-
   function handleNewChat() {
+    if (isLoading) {
+      console.warn("Cannot create a new chat while AI is still reasoning.");
+      return; // Prevent creating a new chat if a response is pending
+    }
+
     // 1. Collect the numeric suffixes from all *visible* chats (Chat X).
     const usedNumbers: number[] = [];
     for (const chat of chats) {
@@ -97,6 +100,8 @@ const App: React.FC = () => {
 
     const userMsg: Message = { role: "user", content: text };
     const updatedChats = [...chats];
+    // Ensure we have a valid active chat before updating
+    if (!updatedChats[activeChatIndex]) return;
     updatedChats[activeChatIndex] = {
       ...updatedChats[activeChatIndex],
       messages: [...updatedChats[activeChatIndex].messages, userMsg],
@@ -234,10 +239,7 @@ const App: React.FC = () => {
 
   return (
     <div className="app-wrapper">
-      <Header
-        onToggleSidebar={toggleSidebar}
-        showLogo={chats[activeChatIndex].messages.length > 0}
-      />
+      <Header onToggleSidebar={toggleSidebar} showLogo={showLogo} />
 
       <div className={sidebarOpen ? "sidebar open" : "sidebar closed"}>
         {sidebarOpen && (
@@ -252,6 +254,7 @@ const App: React.FC = () => {
             onRelations={handleRelationsClick}
             onSuggestCAD={handleSuggestCAD}
             onCrashAnalysis={handleCrashAnalysis}
+            isLoading={isLoading}
           />
         )}
       </div>

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient'; // Adjust path as needed
 import './LoginModal.css';
+import { useNavigate } from 'react-router-dom';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -11,6 +12,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +23,10 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
     });
 
     if (error) {
-      setMessage("You don't have access yet. ");
+      setMessage("You don't have access yet.");
     } else {
-      // On successful login, redirect to the Dashboard page
-      window.location.href = '/dashboard';
+      onClose(); // Close the modal first
+      navigate('/dashboard');
     }
   };
 
