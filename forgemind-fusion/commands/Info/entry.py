@@ -10,7 +10,7 @@
 #  UNINTERRUPTED OR ERROR FREE.
 
 import time
-import adsk.core
+import adsk.core, adsk.fusion, adsk.cam
 import os
 from ... import config
 from ...logic import run_logic
@@ -23,8 +23,8 @@ app = adsk.core.Application.get()
 ui = app.userInterface
 
 CMD_NAME = os.path.basename(os.path.dirname(__file__))
-CMD_ID = f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_{CMD_NAME}'
-CMD_Description = 'ForgeMind AI'
+CMD_ID = f"{config.COMPANY_NAME}_{config.ADDIN_NAME}_{CMD_NAME}"
+CMD_Description = "ForgeMind AI"
 IS_PROMOTED = True
 
 # Global variables by referencing values from /config.py
@@ -37,37 +37,102 @@ PANEL_NAME = config.my_panel_name
 PANEL_AFTER = config.my_panel_after
 
 # Resource location for command icons, here we assume a sub folder in this directory named "resources".
-ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resources', '')
+ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resources", "")
 
 # Holds references to event handlers
 local_handlers = []
 
+
+def get_workspace_description():
+    design = adsk.fusion.Design.cast(app.activeProduct)
+
+    if not design:
+        futil.log("[No active Fusion 360 design]")
+        return None
+
+    description = {"name": design.parentDocument.name, "components": []}
+
+    for comp in design.allComponents:
+        comp_info = {
+            "name": comp.name,
+            "bodies": [body.name for body in comp.bRepBodies],
+            "sketches": [sketch.name for sketch in comp.sketches],
+        }
+        description["components"].append(comp_info)
+
+    return description
+
+
 def get_logic():
+    # Call /poll first
+    poll_req = urllib.request.Request(
+        "http://127.0.0.1:5000/poll",
+        data={},
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
     try:
-        response = urllib.request.urlopen('http://127.0.0.1:5000/poll')
-        if response.getcode() == 200:
-            response_data = response.read().decode('utf-8')
-            json_data = json.loads(response_data)
-            logic = json_data.get("instructions", "")
-            futil.log('Running logic:\n------------START--------\n' + logic+'\n------------END--------')
-            run_logic(logic)
+        poll_response = urllib.request.urlopen(poll_req)
+    except Exception as e:
+        futil.log(f"Error in poll request: {e}")
+        return
+    if poll_response.getcode() == 200:
+        poll_data = poll_response.read().decode("utf-8")
+        if json.loads(poll_data).get("status", True):
+            futil.log(json.loads(poll_data).get("message", "[NO MESSAGE]"))
+            workspace_desc = get_workspace_description()
+            json_payload = json.dumps(workspace_desc).encode("utf-8")
+            req = urllib.request.Request(
+                "http://127.0.0.1:5000/get_instructions",
+                data=json_payload,
+                headers={"Content-Type": "application/json"},
+                method="POST"
+            )
         else:
-            futil.log(f'backend returned status code {response.getcode()}')
-    except urllib.error.URLError as e:
-        # ui.messageBox("[ForgeMind] Something went wrong.")
-        # futil.log(f'Error polling backend: {e}')
-        pass
+            return
+
+    # Call /get_instructions
+    workspace_desc = get_workspace_description()
+    json_payload = json.dumps(workspace_desc).encode("utf-8")
+    req = urllib.request.Request(
+        "http://127.0.0.1:5000/get_instructions",
+        data=json_payload,
+        headers={"Content-Type": "application/json"},
+        method="POST"
+    )
+    response = urllib.request.urlopen(req)
+    if response.getcode() == 200:
+        response_data = response.read().decode("utf-8")
+        json_data = json.loads(response_data)
+        logic = json_data.get("instructions", None)
+        if not logic:
+            return
+        run_logic(logic)
+    else:
+        futil.log(f"backend returned status code {response.getcode()}")
+        return
+
 
 # New function to run get_logic every 10 seconds.
 def schedule_get_logic():
+    futil.log("Scheduling get_logic")
     get_logic()
     threading.Timer(1, schedule_get_logic).start()
+
 
 # Executed when add-in is run.
 def start():
     # ******************************** Create Command Definition ********************************
-    futil.log('[4] FORGEMIND ADD IN BEING RUN - start')
-    cmd_def = ui.commandDefinitions.addButtonDefinition(CMD_ID, CMD_NAME, CMD_Description, ICON_FOLDER)
+    futil.log("[4] FORGEMIND ADD IN BEING RUN - start")
+    
+    # Prevent duplicate command definition error
+    existing_cmd = ui.commandDefinitions.itemById(CMD_ID)
+    if existing_cmd:
+        existing_cmd.deleteMe()
+    
+    cmd_def = ui.commandDefinitions.addButtonDefinition(
+        CMD_ID, CMD_NAME, CMD_Description, ICON_FOLDER
+    )
 
     # Add command created handler. The function passed here will be executed when the command is executed.
     futil.add_handler(cmd_def.commandCreated, command_created)
@@ -81,10 +146,15 @@ def start():
     if toolbar_tab is None:
         toolbar_tab = workspace.toolbarTabs.add(TAB_ID, TAB_NAME)
 
-    # Get target panel for the command and and create the panel if necessary.
+    # Get target panel for the command and create the panel if necessary.
     panel = toolbar_tab.toolbarPanels.itemById(PANEL_ID)
     if panel is None:
         panel = toolbar_tab.toolbarPanels.add(PANEL_ID, PANEL_NAME, PANEL_AFTER, False)
+
+    # Before adding new control, delete an existing one if present.
+    existing_control = panel.controls.itemById(CMD_ID)
+    if existing_control:
+        existing_control.deleteMe()
 
     # Create the command control, i.e. a button in the UI.
     control = panel.controls.addCommand(cmd_def)
@@ -126,16 +196,20 @@ def stop():
 # Here you define the User Interface for your command and identify other command events to potentially handle
 def command_created(args: adsk.core.CommandCreatedEventArgs):
     # General logging for debug
-    futil.log(f'{CMD_NAME} Command Created Event')
+    futil.log(f"{CMD_NAME} Command Created Event")
 
     # Connect to the events that are needed by this command.
-    futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
-    futil.add_handler(args.command.destroy, command_destroy, local_handlers=local_handlers)
+    futil.add_handler(
+        args.command.execute, command_execute, local_handlers=local_handlers
+    )
+    futil.add_handler(
+        args.command.destroy, command_destroy, local_handlers=local_handlers
+    )
 
 
 # This function will be called when the user hits the OK button in the command dialog
 def command_execute(args: adsk.core.CommandEventArgs):
-    futil.log(f'{CMD_NAME} Command Execute Event')
+    futil.log(f"{CMD_NAME} Command Execute Event")
     # msg = f'Running that shit'
     # ui.messageBox(msg)
 
@@ -144,4 +218,4 @@ def command_execute(args: adsk.core.CommandEventArgs):
 def command_destroy(args: adsk.core.CommandEventArgs):
     global local_handlers
     local_handlers = []
-    futil.log(f'{CMD_NAME} Command Destroy Event')
+    futil.log(f"{CMD_NAME} Command Destroy Event")
