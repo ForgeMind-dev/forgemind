@@ -1,5 +1,4 @@
-Running logic
- import adsk.core
+import adsk.core
 import adsk.fusion
 import adsk.cam
 
