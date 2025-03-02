@@ -47,7 +47,7 @@ def get_workspace_description():
     design = adsk.fusion.Design.cast(app.activeProduct)
 
     if not design:
-        futil.log("[No active Fusion 360 design]")
+        futil.log("entry.py::get_workspace_description - No active Fusion 360 design")
         return None
 
     description = {"name": design.parentDocument.name, "components": []}
@@ -60,62 +60,64 @@ def get_workspace_description():
         }
         description["components"].append(comp_info)
 
-    return description
+    return {"cad_state": description}
 
 
 def get_logic():
-    # Call /poll first
+    # Get workspace description
+    workspace_desc = get_workspace_description()
+    json_payload = json.dumps(workspace_desc).encode("utf-8")
+
+    # Call /poll first with workspace description
     poll_req = urllib.request.Request(
         "http://127.0.0.1:5000/poll",
-        data={},
+        data=json_payload,
         headers={"Content-Type": "application/json"},
-        method="POST"
+        method="POST",
     )
     try:
         poll_response = urllib.request.urlopen(poll_req)
     except Exception as e:
-        futil.log(f"Error in poll request: {e}")
+        futil.log(f"entry.py::get_logic - Error in poll request: {e}")
         return
-    if poll_response.getcode() == 200:
-        poll_data = poll_response.read().decode("utf-8")
-        if json.loads(poll_data).get("status", True):
-            futil.log(json.loads(poll_data).get("message", "[NO MESSAGE]"))
-            workspace_desc = get_workspace_description()
-            json_payload = json.dumps(workspace_desc).encode("utf-8")
-            req = urllib.request.Request(
-                "http://127.0.0.1:5000/get_instructions",
-                data=json_payload,
-                headers={"Content-Type": "application/json"},
-                method="POST"
-            )
-        else:
-            return
 
+    if poll_response.getcode() != 200:
+        futil.log("entry.py::get_logic - Non-200 status from poll request")
+        return None
+
+    poll_data = poll_response.read().decode("utf-8")
+    if not json.loads(poll_data).get("status"):
+        futil.log("entry.py::get_logic - No instructions found when polling")
+        return None
+    
+    futil.log(f"entry.py::get_logic - Polling message: {json.loads(poll_data).get('message', '[NO MESSAGE]')}")
     # Call /get_instructions
-    workspace_desc = get_workspace_description()
-    json_payload = json.dumps(workspace_desc).encode("utf-8")
     req = urllib.request.Request(
         "http://127.0.0.1:5000/get_instructions",
         data=json_payload,
         headers={"Content-Type": "application/json"},
-        method="POST"
+        method="POST",
     )
+
     response = urllib.request.urlopen(req)
-    if response.getcode() == 200:
-        response_data = response.read().decode("utf-8")
-        json_data = json.loads(response_data)
-        logic = json_data.get("instructions", None)
-        if not logic:
-            return
-        run_logic(logic)
-    else:
-        futil.log(f"backend returned status code {response.getcode()}")
+    if response.getcode() != 200:
+        futil.log(f"entry.py::get_logic - Backend returned status code {response.getcode()}")
         return
+    
+    response_data = response.read().decode("utf-8")
+    json_data = json.loads(response_data)
+    logic = json_data.get("instructions", None)
+    if not logic:
+        futil.log(f"entry.py::get_logic - get_instructions returned no logic {response.getcode()}")
+        return
+
+    futil.log(f"entry.py::get_logic - get_instructions returned logic:\n\n[\n{logic}\n]")
+    run_logic(logic)
 
 
 # New function to run get_logic every 10 seconds.
 def schedule_get_logic():
-    futil.log("Scheduling get_logic")
+    futil.log("entry.py::schedule_get_logic - Scheduling get_logic")
     get_logic()
     threading.Timer(1, schedule_get_logic).start()
 
@@ -123,13 +125,13 @@ def schedule_get_logic():
 # Executed when add-in is run.
 def start():
     # ******************************** Create Command Definition ********************************
-    futil.log("[4] FORGEMIND ADD IN BEING RUN - start")
-    
+    futil.log("entry.py::start - FORGEMIND ADD IN BEING RUN - start")
+
     # Prevent duplicate command definition error
     existing_cmd = ui.commandDefinitions.itemById(CMD_ID)
     if existing_cmd:
         existing_cmd.deleteMe()
-    
+
     cmd_def = ui.commandDefinitions.addButtonDefinition(
         CMD_ID, CMD_NAME, CMD_Description, ICON_FOLDER
     )
@@ -195,8 +197,7 @@ def stop():
 # Function to be called when a user clicks the corresponding button in the UI
 # Here you define the User Interface for your command and identify other command events to potentially handle
 def command_created(args: adsk.core.CommandCreatedEventArgs):
-    # General logging for debug
-    futil.log(f"{CMD_NAME} Command Created Event")
+    futil.log(f"entry.py::command_created - {CMD_NAME} Command Created Event")
 
     # Connect to the events that are needed by this command.
     futil.add_handler(
@@ -209,7 +210,7 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
 # This function will be called when the user hits the OK button in the command dialog
 def command_execute(args: adsk.core.CommandEventArgs):
-    futil.log(f"{CMD_NAME} Command Execute Event")
+    futil.log(f"entry.py::command_execute - {CMD_NAME} Command Execute Event")
     # msg = f'Running that shit'
     # ui.messageBox(msg)
 
@@ -218,4 +219,4 @@ def command_execute(args: adsk.core.CommandEventArgs):
 def command_destroy(args: adsk.core.CommandEventArgs):
     global local_handlers
     local_handlers = []
-    futil.log(f"{CMD_NAME} Command Destroy Event")
+    futil.log(f"entry.py::command_destroy - {CMD_NAME} Command Destroy Event")

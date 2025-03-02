@@ -9,6 +9,7 @@ from supabase import create_client, Client
 from pydantic import BaseModel, ValidationError
 from openai import OpenAI
 import re
+from redis import Redis
 
 # Load environment variables from .env file
 load_dotenv()
@@ -24,6 +25,9 @@ client = OpenAI(
 
 # Create a Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+
+# Initialize Redis client
+redis_client = Redis(host='localhost', port=6379, db=0)
 
 app = Flask(__name__)
 # Explicitly allow all origins and support credentials
@@ -111,6 +115,13 @@ def chat():
 
 @app.route("/poll", methods=["POST"])
 def poll():
+    data = request.get_json()
+    cad_state = data.get("cad_state")
+    
+    # Store cad_state in Redis
+    if cad_state:
+        redis_client.set(f"cad_state:{data['user_id']}", cad_state)
+    
     # Retrieve one pending operation
     pending_ops = (
         supabase.table("operations")
@@ -127,11 +138,6 @@ def poll():
 
 @app.route("/get_instructions", methods=["POST"])
 def get_instructions():
-    data = request.get_json()
-    name = data.get("name")
-    components = data.get("components")
-    print("polling for name:", name, "and components:", components)
-
     # Retrieve one pending operation
     pending_ops = (
         supabase.table("operations")
