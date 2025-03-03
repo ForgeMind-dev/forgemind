@@ -7,6 +7,7 @@
   align-items: center;
   justify-content: center;
   border-top: 1px solid #333;
+  z-index: 120;
 }
 .footer-content {
   max-width: var(--max-width);

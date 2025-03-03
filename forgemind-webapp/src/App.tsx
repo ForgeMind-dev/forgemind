@@ -11,19 +11,21 @@ import './App.css';
 function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const openLoginModal = () => setShowLoginModal(true);
   const closeLoginModal = () => setShowLoginModal(false);
   const openWaitlistModal = () => setShowWaitlistModal(true);
   const closeWaitlistModal = () => setShowWaitlistModal(false);
+  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
     <div className="App">
-      <Header onLoginClick={openLoginModal} />
+      <Header onLoginClick={openLoginModal} onToggleSidebar={toggleSidebar} />
       <main>
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<Dashboard onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen}/>} />
         </Routes>
       </main>
       <Footer />

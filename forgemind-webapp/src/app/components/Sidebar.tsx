@@ -71,14 +71,14 @@ const Sidebar: React.FC<SidebarProps> = ({
         ))}
       </ul>
 
-      <h2>Quick Tools</h2>
+      {/* <h2>Quick Tools</h2>
       <div className="quick-actions">
         <button onClick={onSuggestCAD}>Suggest a CAD Tool</button>
         <button onClick={onOptimize}>Optimize Tolerances</button>
         <button onClick={onRefine}>Refine Curved Surfaces</button>
         <button onClick={onCrashAnalysis}>Run Crash Analysis</button>
         <button onClick={onRelations}>View Part Relations</button>
-      </div>
+      </div> */}
     </div>
   );
 };

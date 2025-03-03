@@ -12,12 +12,11 @@ interface ChatWindowProps {
 const ChatWindow: React.FC<ChatWindowProps> = ({
   chats,
   activeChatIndex,
-  fullLogo,
   isLoading,
 }) => {
   const currentChat = chats[activeChatIndex];
   const [loadingText, setLoadingText] = useState("Designing");
-  
+
   // 1. Ref for the messages container
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -52,19 +51,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     return () => clearInterval(interval);
   }, [isLoading, baseText]);
 
-  // If no messages yet, show landing
-  if (currentChat.messages.length === 0) {
-    return (
-      <div className="center-content">
-        <img src={fullLogo} alt="ForgeMind Logo" className="main-logo" />
-        <h1>What do you want to design today?</h1>
-      </div>
-    );
-  }
+  const messagesToShow = currentChat.messages.length ? currentChat.messages : [{ role: "ai", content: "How can I help you?" }];
 
   return (
     <div ref={messagesEndRef} className="messages-container">
-      {currentChat.messages.map((msg, idx) =>
+      {messagesToShow.map((msg, idx) =>
         msg.role === "user" ? (
           <div key={idx} className="msg user-msg">
             {msg.content}
