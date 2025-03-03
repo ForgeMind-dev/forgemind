@@ -7,23 +7,55 @@ app = adsk.core.Application.get()
 ui = app.userInterface
 
 def get_workspace_state():
-    design = adsk.fusion.Design.cast(app.activeProduct)
+    try:
+        design = adsk.fusion.Design.cast(app.activeProduct)
 
-    if not design:
-        futil.log("entry.py::get_workspace_description - No active Fusion 360 design")
+        if not design:
+            futil.log("entry.py::get_workspace_description - No active Fusion 360 design")
+            return None
+
+        description = {"name": design.parentDocument.name, "components": []}
+
+        for comp in design.allComponents:
+            comp_info = {
+                "name": comp.name,
+                "bodies": [],
+                "sketches": []
+            }
+
+            for body in comp.bRepBodies:
+                body_info = {
+                    "name": body.name,
+                    "volume": body.volume,
+                    "surface_area": body.surfaceArea,
+                    "bounding_box": {
+                        "min_point": body.boundingBox.minPoint.asArray(),
+                        "max_point": body.boundingBox.maxPoint.asArray()
+                    }
+                }
+                comp_info["bodies"].append(body_info)
+
+            for sketch in comp.sketches:
+                sketch_info = {
+                    "name": sketch.name,
+                    "profiles": []
+                }
+
+                for profile in sketch.profiles:
+                    profile_info = {
+                        "area": profile.areaProperties.area,
+                        "perimeter": profile.areaProperties.perimeter
+                    }
+                    sketch_info["profiles"].append(profile_info)
+
+                comp_info["sketches"].append(sketch_info)
+
+            description["components"].append(comp_info)
+
+        return {"cad_state": description, "user_id": 'c2e9c803-41aa-4073-8b9d-f67b8cabfe9b'}
+    except Exception as error:
+        futil.log('Error in get_workspace_state: ' + str(error))
         return None
-
-    description = {"name": design.parentDocument.name, "components": []}
-
-    for comp in design.allComponents:
-        comp_info = {
-            "name": comp.name,
-            "bodies": [body.name for body in comp.bRepBodies],
-            "sketches": [sketch.name for sketch in comp.sketches],
-        }
-        description["components"].append(comp_info)
-
-    return {"cad_state": description, "user_id": 'FURGO'}
 
 def run_logic(logic: str) -> dict:
     try:
@@ -61,5 +93,6 @@ def run_logic(logic: str) -> dict:
         futil.log('Error: ' + str(error))
         return {
             'status': 'error',
-            'message': str(error)
+            'message': str(error),
+            'workspace_state': get_workspace_state()
         }

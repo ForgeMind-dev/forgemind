@@ -76,9 +76,26 @@ def chat():
 
     thread = client.beta.threads.create()
 
+    cad_state = redis_client.get(f"cad_state:{data.user_id}")
+    cad_state = cad_state.decode("utf-8") if cad_state else "No CAD state found"
+
+    cad_status = redis_client.get(f"status:{data.user_id}")
+    cad_status = cad_status.decode("utf-8") if cad_status else "No CAD status found"
+
+    cad_message = redis_client.get(f"message:{data.user_id}")
+    cad_message = cad_message.decode("utf-8") if cad_message else "No CAD message found"
+
+    cad_status += f"\n{cad_message}"
+
+    print('Checking keys', f"cad_state:{data.user_id}", f"status:{data.user_id}", f"message:{data.user_id}")
+    content = f"CAD workspace contents:\n```\n{cad_state}\n```\nCAD workspace status:\n```\n{cad_status}\n````\nInstructions:\n```\n{data.text}\n```"
+
+    print('------- Query to LLM   -----------------------')
+    print(content)
+    print('------- Query Complete -----------------------')
     # Add a message to the thread
     message = client.beta.threads.messages.create(
-        thread_id=thread.id, role="user", content=data.text
+        thread_id=thread.id, role="user", content=content
     )
 
     # Create a run
@@ -134,6 +151,9 @@ def instruction_result():
     redis_client.set(f"cad_state:{user_id}", json.dumps(cad_state) if isinstance(cad_state, dict) else cad_state)
     redis_client.set(f"message:{user_id}", message)
     redis_client.set(f"status:{user_id}", status)
+    print(f"FURGO result storing under key", f"cad_state:{user_id}", cad_state)
+    print(f"FURGO result storing under key", f"message:{user_id}", message)
+    print(f"FURGO result storing under key", f"status:{user_id}", status)
 
     return jsonify({"status": True, "message": "Result stored"})
 
@@ -147,6 +167,7 @@ def poll():
         return jsonify({"status": False, "message": "Missing user_id"}), 400
     # Store cad_state in Redis
     if cad_state:
+        print(f"FURGO storing under key", f"cad_state:{user_id}", cad_state)
         redis_client.set(f"cad_state:{user_id}", json.dumps(cad_state) if isinstance(cad_state, dict) else cad_state)
     
     # Retrieve one pending operation

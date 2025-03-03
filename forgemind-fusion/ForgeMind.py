@@ -9,7 +9,7 @@ def run(context):
         if not context['IsApplicationStartup']:
             app = adsk.core.Application.get()
             ui = app.userInterface
-            ui.messageBox("ForgeMind is running. Go to Utilities > ForgeMind to start using it.")
+            ui.messageBox("ForgeMind is running. Go to ForgeMind.dev to start using it.")
             
         # This will run the start function in each of your commands as defined in commands/__init__.py
         commands.start()
