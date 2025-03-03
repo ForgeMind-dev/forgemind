@@ -13,11 +13,37 @@ import urllib.error
 from . import fusionAddInUtils as futil
 
 # Backend API URL - Try to get from environment variable or use default
-BACKEND_URL = os.getenv("FORGEMIND_BACKEND_URL", "https://forgemind-backend.onrender.com")
+BACKEND_URL = os.getenv("FORGEMIND_BACKEND_URL", "http://localhost:5000")
 futil.log(f"Using backend URL: {BACKEND_URL}")
 
 # Store the current session token
 current_session = None
+
+def test_connection():
+    """
+    Tests the connection to the backend server.
+    
+    Returns:
+    --------
+    tuple
+        (bool, str) - (is_connected, error_message)
+    """
+    try:
+        req = urllib.request.Request(
+            BACKEND_URL,
+            method='GET'
+        )
+        with urllib.request.urlopen(req) as response:
+            return True, None
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            # A 404 on the root path might be okay - the server is running but the path doesn't exist
+            return True, None
+        return False, f"Server error (HTTP {e.code}): {str(e)}"
+    except urllib.error.URLError as e:
+        return False, f"Connection error: {str(e.reason)}"
+    except Exception as e:
+        return False, f"Error: {str(e)}"
 
 def make_request(endpoint, data=None, method='POST', headers=None):
     """
@@ -39,6 +65,16 @@ def make_request(endpoint, data=None, method='POST', headers=None):
     dict
         The parsed JSON response from the server
     """
+    # Test connection first
+    is_connected, error_msg = test_connection()
+    if not is_connected:
+        futil.log(f"Backend server not available: {error_msg}")
+        return {
+            "status": "error",
+            "message": f"Backend server not available: {error_msg}",
+            "is_valid": False
+        }
+    
     url = f"{BACKEND_URL}{endpoint}"
     headers = headers or {}
     headers['Content-Type'] = 'application/json'
@@ -60,11 +96,17 @@ def make_request(endpoint, data=None, method='POST', headers=None):
         # Parse error response if available
         try:
             error_body = json.loads(e.read().decode())
-            futil.log(f"API error: {error_body.get('message', str(e))}")
-            return error_body
+            error_msg = error_body.get('message', str(e))
+            if e.code == 404:
+                error_msg = f"API endpoint not found: {endpoint}"
+            futil.log(f"API error: {error_msg}")
+            return {"status": "error", "message": error_msg, "is_valid": False}
         except:
-            futil.log(f"HTTP error: {str(e)}")
-            return {"status": "error", "message": str(e), "is_valid": False}
+            error_msg = str(e)
+            if e.code == 404:
+                error_msg = f"API endpoint not found: {endpoint}"
+            futil.log(f"HTTP error: {error_msg}")
+            return {"status": "error", "message": error_msg, "is_valid": False}
     except Exception as e:
         futil.log(f"Request error: {str(e)}")
         return {"status": "error", "message": str(e), "is_valid": False}

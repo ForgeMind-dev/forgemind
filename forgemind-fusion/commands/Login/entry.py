@@ -261,6 +261,12 @@ def command_execute(args: adsk.core.CommandEventArgs):
             login_retry = True  # Mark that we're retrying due to validation failure
             args.isValidResult = False
             
+            # Show error in dialog
+            try:
+                ui.messageBox(login_error_message, 'Login Error')
+            except:
+                pass
+            
             # Reopen the dialog after a brief delay
             timer = threading.Timer(0.1, execute_login_command)
             timer.start()
@@ -269,10 +275,14 @@ def command_execute(args: adsk.core.CommandEventArgs):
         login_error_message = "Authentication error. Please try again."
         
         # Check for specific error types to provide better user feedback
-        if "connection" in error_msg.lower():
+        if "API endpoint not found" in error_msg:
+            login_error_message = "Backend service is starting up. Please wait a moment and try again."
+        elif "connection" in error_msg.lower():
             login_error_message = "Could not connect to authentication service. Please check your connection."
         elif "timeout" in error_msg.lower():
             login_error_message = "Connection timed out. Please try again."
+        elif "Backend server not available" in error_msg:
+            login_error_message = "Authentication service is not available. Please try again in a moment."
         
         futil.log(f"Login error: {error_msg}")
         is_logged_in = False
@@ -281,7 +291,7 @@ def command_execute(args: adsk.core.CommandEventArgs):
         
         # Show error in dialog
         try:
-            ui.messageBox(f"Authentication error: {error_msg}", 'Login Error')
+            ui.messageBox(login_error_message, 'Login Error')
         except:
             pass
             
