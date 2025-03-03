@@ -2,29 +2,19 @@ import React, { useState } from "react";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import BottomBar from "./components/BottomBar";
-import ConnectCADModal from "./components/ConnectCADModal";
-import OptimizeModal from "./components/OptimizeModal";
-import RefineModal from "./components/RefineModal";
-import RelationsModal from "./components/RelationsModal";
 import { sendPrompt } from "./api";
 import Header from "../components/layout/Header";
 
 // Import modular CSS
 import "./styles/reset.css";
 import "./styles/layout.css";
-import "./styles/buttons.css";
 import "./styles/ChatWindow.css";
 import "./styles/BottomBar.css";
-import "./styles/modal.css";
 import "./styles/Sidebar.css";
-import "./styles/Header.css";
 
 import fullLogo from "./assets/full_logo.png";
 import logoIcon from "./assets/logo_icon.png";
 import { Chat, Message } from "./types";
-
-const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
-const MODEL = "gpt-4o";
 
 interface AppProps {
   onToggleSidebar: () => void;
@@ -35,21 +25,6 @@ const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
   const [chats, setChats] = useState<Chat[]>([{ name: "Chat 1", messages: [] }]);
   const [activeChatIndex, setActiveChatIndex] = useState<number>(0);
   const [input, setInput] = useState<string>("");
-
-  const [showCADPopup, setShowCADPopup] = useState<boolean>(false);
-  const [showOptimizeModal, setShowOptimizeModal] = useState<boolean>(false);
-  const [optimizeStep, setOptimizeStep] = useState<number>(1);
-  const [constraintsInput, setConstraintsInput] = useState<string>("");
-  const [showRefineModal, setShowRefineModal] = useState<boolean>(false);
-  const [refineStep, setRefineStep] = useState<number>(1);
-  const [showRelationsModal, setShowRelationsModal] = useState<boolean>(false);
-  const [relationsStep, setRelationsStep] = useState<number>(1);
-  const [relationChoice, setRelationChoice] = useState<string>("");
-  const [otherText, setOtherText] = useState<string>("");
-
-  const [chosenCAD, setChosenCAD] = useState<string>("");
-  const [customCAD, setCustomCAD] = useState<string>("");
-
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   // Use optional chaining to safely access messages
@@ -58,154 +33,68 @@ const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
 
   function handleNewChat() {
     if (isLoading) {
-      console.warn("Cannot create a new chat while AI is still reasoning.");
-      return; // Prevent creating a new chat if a response is pending
+      return;
     }
 
-    // 1. Collect the numeric suffixes from all *visible* chats (Chat X).
-    const usedNumbers: number[] = [];
-    for (const chat of chats) {
-      // Skip hidden chats
-      if (chat.visible === false) continue;
-  
-      // Parse out the number if it matches "Chat X"
-      const match = chat.name.match(/^Chat\s+(\d+)$/);
-      if (match) {
-        usedNumbers.push(parseInt(match[1], 10));
-      }
-    }
-  
-    // 2. Sort them
-    usedNumbers.sort((a, b) => a - b);
-  
-    // 3. Find the smallest missing number, starting at 1
-    let nextNumber = 1;
-    for (const num of usedNumbers) {
-      if (num === nextNumber) {
-        nextNumber++;
-      } else if (num > nextNumber) {
-        // We found a gap, so break
-        break;
-      }
-    }
-  
-    // 4. Create the new chat using that number
-    const newChat: Chat = { name: `Chat ${nextNumber}`, messages: [] };
-    setChats([...chats, newChat]);
+    setChats([...chats, { name: `Chat ${chats.length + 1}`, messages: [] }]);
     setActiveChatIndex(chats.length);
+    setInput("");
   }
-  
 
   async function handleSend() {
-    const text = input.trim();
-    if (!text) return;
+    if (!input.trim() || isLoading) {
+      return;
+    }
 
-    const userMsg: Message = { role: "user", content: text };
-    const updatedChats = [...chats];
-    // Ensure we have a valid active chat before updating
-    if (!updatedChats[activeChatIndex]) return;
-    updatedChats[activeChatIndex] = {
-      ...updatedChats[activeChatIndex],
-      messages: [...updatedChats[activeChatIndex].messages, userMsg],
+    // Create new message and add to active chat
+    const newMessage: Message = {
+      role: "user",
+      content: input,
     };
-    setChats(updatedChats);
-    setInput("");
 
+    const updatedChats = [...chats];
+    updatedChats[activeChatIndex].messages.push(newMessage);
+
+    // Clear input field
+    setInput("");
     setIsLoading(true);
 
+    // Update state to reflect user message
+    setChats(updatedChats);
+
     try {
-      const response = await sendPrompt(text, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
-      const assistantReply = response.response;
+      // Send to backend API and get response
+      const aiResponse = await sendPrompt(input, "user123");
 
-      const isScript =
-        assistantReply.includes("function") ||
-        assistantReply.includes("import") ||
-        assistantReply.includes("const ") ||
-        assistantReply.includes("let ") ||
-        assistantReply.includes("var ");
-
-      const finalReply = isScript
-        ? "Done, do you need anything else?"
-        : assistantReply;
-
-      const assistantMsg: Message = { role: "assistant", content: finalReply };
-
-      const finalChats = [...updatedChats];
-      finalChats[activeChatIndex] = {
-        ...finalChats[activeChatIndex],
-        messages: [...finalChats[activeChatIndex].messages, assistantMsg],
+      // Create AI message
+      const aiMessage: Message = {
+        role: "assistant",
+        content: aiResponse?.response || "Sorry, there was an error processing your request.",
       };
-      setChats(finalChats);
-    } catch (err) {
-      console.error("API error:", err);
-      const errorMsg: Message = { role: "assistant", content: "Sorry, something went wrong." };
-      const finalChats = [...updatedChats];
-      finalChats[activeChatIndex] = {
-        ...finalChats[activeChatIndex],
-        messages: [...finalChats[activeChatIndex].messages, errorMsg],
+
+      // Add AI message to chat
+      updatedChats[activeChatIndex].messages.push(aiMessage);
+
+      // Update state
+      setChats([...updatedChats]);
+    } catch (error) {
+      console.error("Error calling API:", error);
+
+      // Create error message
+      const errorMessage: Message = {
+        role: "assistant",
+        content: "Sorry, I encountered an error. Please try again.",
       };
-      setChats(finalChats);
+
+      // Add error message to chat
+      updatedChats[activeChatIndex].messages.push(errorMessage);
+
+      // Update state
+      setChats([...updatedChats]);
     } finally {
       setIsLoading(false);
     }
   }
-
-  // Modal handlers
-  const handleOpenCADPopup = () => setShowCADPopup(true);
-  const handleCloseCADPopup = () => setShowCADPopup(false);
-
-  const handleOptimizeClick = () => {
-    setShowOptimizeModal(true);
-    setOptimizeStep(1);
-    setConstraintsInput("");
-  };
-
-  const handleOptimizeSubmitUpload = () => setOptimizeStep(2);
-  const handleOptimizeSubmitConstraints = () => setOptimizeStep(3);
-  const handleCancelOptimize = () => {
-    setShowOptimizeModal(false);
-    setOptimizeStep(1);
-    setConstraintsInput("");
-  };
-
-  const handleRefineClick = () => {
-    setShowRefineModal(true);
-    setRefineStep(1);
-  };
-
-  const handleRefineSubmitSurfaces = () => setRefineStep(2);
-  const handleCancelRefine = () => {
-    setShowRefineModal(false);
-    setRefineStep(1);
-  };
-
-  const handleRelationsClick = () => {
-    setShowRelationsModal(true);
-    setRelationsStep(1);
-  };
-
-  const handleRelationsSubmitParts = () => setRelationsStep(2);
-  const handleRelationsSubmitBodyOrAssembly = () => setRelationsStep(3);
-  const handleCancelRelations = () => {
-    setShowRelationsModal(false);
-    setRelationsStep(1);
-  };
-
-  const handleSelectCAD = (cad: string) => {
-    if (cad === "Other") {
-      setChosenCAD("Other");
-      setCustomCAD("");
-    } else {
-      setChosenCAD(cad);
-      setCustomCAD("");
-    }
-    setShowCADPopup(false);
-  };
-
-  const handleDisconnectCAD = () => {
-    setChosenCAD("");
-    setCustomCAD("");
-  };
 
   // New Quick Tool Handlers
   const handleSuggestCAD = () => {
@@ -219,101 +108,69 @@ const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
   };
 
   function handleDeleteChat(index: number) {
-    // Map over chats and set visible to false for the selected chat
-    const updatedChats = chats.map((chat, i) =>
-      i === index ? { ...chat, visible: false } : chat
-    );
-    setChats(updatedChats);
+    // Remove the chat from the list
+    const updatedChats = chats.filter((_, i) => i !== index);
 
-    // If the active chat is being hidden, update activeChatIndex to the first visible chat (if any)
-    if (index === activeChatIndex) {
-      const firstVisibleIndex = updatedChats.findIndex(chat => chat.visible !== false);
-      if (firstVisibleIndex >= 0) {
-        setActiveChatIndex(firstVisibleIndex);
-      } else {
-        // If no chat is visible, optionally create a new default chat
-        const newChat: Chat = { name: "Chat 1", messages: [] };
-        setChats([newChat]);
-        setActiveChatIndex(0);
+    if (updatedChats.length === 0) {
+      // If we deleted the last chat, create a new empty one
+      setChats([{ name: "Chat 1", messages: [] }]);
+      setActiveChatIndex(0);
+    } else {
+      setChats(updatedChats);
+      // Adjust active index if needed
+      if (index === activeChatIndex) {
+        // If we deleted the active chat, set active to the previous one
+        // or the first one if we deleted the first chat
+        setActiveChatIndex(index === 0 ? 0 : index - 1);
+      } else if (index < activeChatIndex) {
+        // If we deleted a chat before the active one, decrement the active index
+        setActiveChatIndex(activeChatIndex - 1);
       }
+      // If we deleted a chat after the active one, no change to active index is needed
     }
   }
 
+  // These empty handlers are placeholders for the removed modals
+  const handleOptimize = () => console.log("Optimize feature removed");
+  const handleRefine = () => console.log("Refine feature removed");
+  const handleRelations = () => console.log("Relations feature removed");
+
   return (
     <div className="app-wrapper">
-      <div className={sidebarOpen ? "sidebar open" : "sidebar closed"}>
-        {sidebarOpen && (
+      <Header onToggleSidebar={onToggleSidebar} />
+      
+      <div className={containerClass}>
+        <div className={sidebarOpen ? "sidebar" : "sidebar closed"}>
           <Sidebar
             chats={chats}
             activeChatIndex={activeChatIndex}
             setActiveChatIndex={setActiveChatIndex}
             onNewChat={handleNewChat}
             onDeleteChat={handleDeleteChat}
-            onOptimize={handleOptimizeClick}
-            onRefine={handleRefineClick}
-            onRelations={handleRelationsClick}
+            onOptimize={handleOptimize}
+            onRefine={handleRefine}
+            onRelations={handleRelations}
             onSuggestCAD={handleSuggestCAD}
             onCrashAnalysis={handleCrashAnalysis}
             isLoading={isLoading}
           />
-        )}
-      </div>
-
-      <div className={containerClass} style={{ marginTop: "50px" }}>
+        </div>
+        
         <ChatWindow
           chats={chats}
           activeChatIndex={activeChatIndex}
-          fullLogo={fullLogo}
           isLoading={isLoading}
+          fullLogo={fullLogo}
         />
-
+        
         <BottomBar
           input={input}
           setInput={setInput}
           onSend={handleSend}
           logoIcon={logoIcon}
+          className={chats[activeChatIndex]?.messages?.length === 0 ? "centered-bottom-bar" : ""}
         />
       </div>
-
-      {showCADPopup && (
-        <ConnectCADModal
-          onSelectCAD={(cad) => {
-            setChosenCAD(cad);
-            setShowCADPopup(false);
-          }}
-          onClose={() => setShowCADPopup(false)}
-        />
-      )}
-
-      {showOptimizeModal && (
-        <OptimizeModal
-          step={optimizeStep}
-          constraintsInput={constraintsInput}
-          setConstraintsInput={setConstraintsInput}
-          onNextStep={optimizeStep === 1 ? handleOptimizeSubmitUpload : handleOptimizeSubmitConstraints}
-          onCancel={handleCancelOptimize}
-        />
-      )}
-
-      {showRefineModal && (
-        <RefineModal
-          step={refineStep}
-          onNextStep={handleRefineSubmitSurfaces}
-          onCancel={handleCancelRefine}
-        />
-      )}
-
-      {showRelationsModal && (
-        <RelationsModal
-          step={relationsStep}
-          relationChoice={relationChoice}
-          otherText={otherText}
-          setRelationChoice={setRelationChoice}
-          setOtherText={setOtherText}
-          onNextStep={relationsStep === 1 ? handleRelationsSubmitParts : handleRelationsSubmitBodyOrAssembly}
-          onCancel={handleCancelRelations}
-        />
-      )}
     </div>
   );
 };

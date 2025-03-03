@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Routes, Route } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Routes, Route, useLocation } from 'react-router-dom';
 import Header from './components/layout/Header';
 import Home from './pages/Home';
 import Footer from './components/layout/Footer';
@@ -12,6 +12,20 @@ function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [showWaitlistModal, setShowWaitlistModal] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const location = useLocation();
+
+  // Effect to add/remove dashboard-page class based on current route
+  useEffect(() => {
+    const isDashboard = location.pathname === '/dashboard';
+    
+    if (isDashboard) {
+      document.documentElement.classList.add('dashboard-page');
+      document.body.classList.add('dashboard-page');
+    } else {
+      document.documentElement.classList.remove('dashboard-page');
+      document.body.classList.remove('dashboard-page');
+    }
+  }, [location.pathname]);
 
   const openLoginModal = () => setShowLoginModal(true);
   const closeLoginModal = () => setShowLoginModal(false);

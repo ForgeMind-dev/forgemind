@@ -90,3 +90,18 @@
     color: #a9c1f2;
   }
   
+  .forgot-password-link {
+    display: block;
+    background: none;
+    border: none;
+    color: #a9c1f2;
+    font-size: 0.9rem;
+    margin: 15px auto 0;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  
+  .forgot-password-link:hover {
+    color: #98b2e8;
+  }
+  

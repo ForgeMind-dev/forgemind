@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../../supabaseClient'; // Adjust path as needed
 import './LoginModal.css';
 import { useNavigate } from 'react-router-dom';
+import ForgotPasswordModal from './ForgotPasswordModal';
 
 interface LoginModalProps {
   onClose: () => void;
@@ -12,6 +13,7 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [message, setMessage] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -29,6 +31,15 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
       navigate('/dashboard');
     }
   };
+
+  if (showForgotPassword) {
+    return (
+      <ForgotPasswordModal
+        onClose={onClose}
+        onBackToLogin={() => setShowForgotPassword(false)}
+      />
+    );
+  }
 
   return (
     <div className="login-modal-overlay">
@@ -56,6 +67,13 @@ const LoginModal: React.FC<LoginModalProps> = ({ onClose, onOpenWaitlist }) => {
           />
           <button type="submit" className="login-submit">
             Login
+          </button>
+          <button
+            type="button"
+            className="forgot-password-link"
+            onClick={() => setShowForgotPassword(true)}
+          >
+            Forgot Password?
           </button>
         </form>
         {message && (

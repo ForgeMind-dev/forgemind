@@ -5,6 +5,7 @@ interface BottomBarProps {
   setInput: Dispatch<SetStateAction<string>>;
   onSend: () => void;
   logoIcon: string;
+  className?: string;
 }
 
 const BottomBar: React.FC<BottomBarProps> = ({
@@ -12,6 +13,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
   setInput,
   onSend,
   logoIcon,
+  className = "",
 }) => {
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -19,8 +21,10 @@ const BottomBar: React.FC<BottomBarProps> = ({
     if (textAreaRef.current) {
       // Reset height to auto to shrink it first
       textAreaRef.current.style.height = "auto";
-      // Then set it to scrollHeight to expand
-      textAreaRef.current.style.height = textAreaRef.current.scrollHeight + "px";
+      // Then set it to scrollHeight to expand, with a max height
+      const maxHeight = 100; // Maximum height in pixels
+      const newHeight = Math.min(textAreaRef.current.scrollHeight, maxHeight);
+      textAreaRef.current.style.height = newHeight + "px";
     }
   };
 
@@ -51,7 +55,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
   };
 
   return (
-    <div className="bottom-bar">
+    <div className={`bottom-bar ${className}`}>
       <div className="chat-bubble">
         <div className="chat-bubble-icon">
           <img src={logoIcon} alt="Chat Icon" className="chat-icon-img" />
@@ -59,7 +63,7 @@ const BottomBar: React.FC<BottomBarProps> = ({
         <textarea
           ref={textAreaRef}
           className="chat-bubble-textarea"
-          placeholder="Start building with ForgeMind..."
+          placeholder={className.includes("centered-bottom-bar") ? "Ask anything" : "Start designing with ForgeMind..."}
           value={input}
           onChange={handleChange}
           onKeyDown={handleKeyDown}

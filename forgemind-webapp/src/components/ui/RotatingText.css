@@ -1,34 +1,31 @@
+.rotating-text-wrapper {
+  display: inline-block;
+  width: 100%;
+  position: relative;
+  vertical-align: middle;
+  text-align: left;
+}
+
 .rotating-text {
-    display: inline-block;
-    transition: transform 0.5s ease-in-out, opacity 0.5s ease-in-out;
-    animation: fadeIn 0.5s ease-in-out;
-    /* Optionally add more advanced animations, e.g., fade in/out, slide, etc. */
+  display: inline-block;
+  white-space: nowrap;
+  position: relative;
+  margin: 0;
+  padding: 0;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
-
-  
-  @keyframes fadeIn {
-    from {
-      opacity: 0;
-    }
-    to {
-      opacity: 1;
-    }
+  to {
+    opacity: 1;
   }
-
-.fade-in {
-  opacity: 1;
 }
 
-.fade-out {
-  opacity: 0;
-}
-
-.rotate-in {
-  transform: rotateX(0deg);
-  opacity: 1;
-}
-
-.rotate-out {
-  transform: rotateX(90deg);
-  opacity: 0;
-}
+@media (max-width: 768px) {
+  .rotating-text-wrapper {
+    width: 100%;
+  }
+} 
