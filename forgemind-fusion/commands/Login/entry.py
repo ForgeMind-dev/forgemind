@@ -7,13 +7,9 @@ from ... import config
 from ...lib import fusionAddInUtils as futil
 from ...lib import supabase_config
 
-# Import Supabase client
-try:
-    from supabase import create_client, Client
-    SUPABASE_AVAILABLE = True
-except ImportError:
-    SUPABASE_AVAILABLE = False
-    futil.log("Supabase client not available. Install with 'pip install supabase'")
+# No longer need to separately import and check Supabase
+# The supabase_config module handles this for us now
+SUPABASE_AVAILABLE = supabase_config.is_available()
 
 """
 ForgeMind Login Module
@@ -46,18 +42,14 @@ Security Notes:
 app = adsk.core.Application.get()
 ui = app.userInterface
 
-# Supabase client initialization
-supabase: Client = None
-try:
-    if SUPABASE_AVAILABLE:
-        supabase = create_client(supabase_config.SUPABASE_URL, supabase_config.SUPABASE_KEY)
-        futil.log(f"Supabase client initialized with URL: {supabase_config.SUPABASE_URL}")
-except Exception as e:
-    futil.log(f"Error initializing Supabase client: {str(e)}")
-    supabase = None
-
-# Store the JWT token upon successful authentication
+# Supabase client reference
+supabase = supabase_config.get_client()
 auth_token = None
+
+if SUPABASE_AVAILABLE:
+    futil.log(f"Login module initialized with Supabase authentication")
+else:
+    futil.log("Login module initialized with local authentication fallback")
 
 CMD_NAME = os.path.basename(os.path.dirname(__file__))
 CMD_ID = f"{config.COMPANY_NAME}_{config.ADDIN_NAME}_{CMD_NAME}"
@@ -110,7 +102,7 @@ def validate_credentials(email, password):
     ------
     If Supabase integration is not available or fails, falls back to basic validation.
     """
-    global supabase, auth_token
+    global auth_token
     
     # Basic validation
     if not email or not password or '@' not in email:
@@ -118,9 +110,11 @@ def validate_credentials(email, password):
         return False
     
     # If Supabase is not available, use basic validation
-    if not SUPABASE_AVAILABLE or not supabase:
+    if not SUPABASE_AVAILABLE:
         futil.log("Warning: Using fallback validation as Supabase is not available")
-        return True  # Simple fallback for testing
+        # Simple fallback using hardcoded credentials for testing
+        # In a production environment, you'd want a more secure fallback
+        return email == "ata@forgemind.dev" and password == "test123"
     
     try:
         # Attempt to sign in with Supabase
@@ -128,7 +122,7 @@ def validate_credentials(email, password):
         response = supabase.auth.sign_in_with_password({"email": email, "password": password})
         
         # Store the session token
-        if response and response.session:
+        if response and hasattr(response, 'session') and response.session:
             auth_token = response.session.access_token
             futil.log(f"Authentication successful for {email}")
             return True
@@ -267,8 +261,8 @@ def command_execute(args: adsk.core.CommandEventArgs):
                 futil.log("Remember me set, would securely store the auth token")
         else:
             # If login fails, set appropriate error message based on available information
-            if not SUPABASE_AVAILABLE or not supabase:
-                login_error_message = "Authentication service unavailable. Using local validation."
+            if not SUPABASE_AVAILABLE:
+                login_error_message = "Using local validation. Invalid credentials."
             else:
                 login_error_message = "Invalid credentials. Please try again."
             
@@ -285,13 +279,16 @@ def command_execute(args: adsk.core.CommandEventArgs):
         error_msg = str(e)
         login_error_message = "Authentication error. Please try again."
         
-        # Check for specific error types to provide better user feedback
-        if "Invalid login credentials" in error_msg:
-            login_error_message = "Invalid email or password. Please try again."
-        elif "rate limit" in error_msg.lower():
-            login_error_message = "Too many login attempts. Please try again later."
-        elif "network" in error_msg.lower() or "connection" in error_msg.lower():
-            login_error_message = "Network error. Please check your connection."
+        if not SUPABASE_AVAILABLE:
+            login_error_message = "Using local validation. System error occurred."
+        else:
+            # Check for specific error types to provide better user feedback
+            if "Invalid login credentials" in error_msg:
+                login_error_message = "Invalid email or password. Please try again."
+            elif "rate limit" in error_msg.lower():
+                login_error_message = "Too many login attempts. Please try again later."
+            elif "network" in error_msg.lower() or "connection" in error_msg.lower():
+                login_error_message = "Network error. Please check your connection."
         
         futil.log(f"Login error: {error_msg}")
         is_logged_in = False
@@ -374,7 +371,7 @@ def get_login_status():
     This function logs the current status for debugging purposes.
     If Supabase authentication is active, it will check the token validity.
     """
-    global supabase, auth_token
+    global auth_token
     
     futil.log(f"Login status check: is_logged_in={is_logged_in}, canceled={login_canceled}, retry={login_retry}")
     
@@ -391,7 +388,7 @@ def get_login_status():
         try:
             # Get the user from the current session
             user = supabase.auth.get_user(auth_token)
-            if user and user.user:
+            if user and hasattr(user, 'user') and user.user:
                 futil.log(f"Supabase token verification successful for user: {user.user.email}")
                 return True
             else:
@@ -400,8 +397,10 @@ def get_login_status():
                 return False
         except Exception as e:
             futil.log(f"Supabase token verification error: {str(e)}")
-            is_logged_in = False
-            return False
+            # Don't change the login state on verification error if Supabase isn't working
+            # This allows fallback to the basic validation
+            futil.log("Continuing with current login state due to Supabase error")
+            return is_logged_in
     
     # Return the current login state
     return is_logged_in 

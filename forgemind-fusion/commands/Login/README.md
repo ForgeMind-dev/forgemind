@@ -1,72 +1,48 @@
-# ForgeMind Login Module with Supabase Authentication
+# ForgeMind Login Module
 
-This module provides authentication functionality for the ForgeMind Fusion 360 add-in, leveraging Supabase for user authentication.
+## Overview
+The Login module provides user authentication functionality for the ForgeMind add-in for Autodesk Fusion 360. It implements a login dialog that collects user credentials, validates them, and manages the login state throughout the add-in's lifecycle.
 
 ## Features
+- Login dialog with email/password inputs and "Remember Me" option
+- Input validation with error messaging
+- Persistence of login state across commands
+- Handling of login cancellation
+- Integration with Supabase authentication service
+- Fallback authentication for when Supabase is not available
 
-- User login via email and password
-- Integration with Supabase authentication
-- "Remember Me" functionality
-- Graceful error handling for authentication failures
-- Proper session management
+## Authentication Flow
+1. When the add-in starts, the login dialog is presented first
+2. User enters credentials (email and password)
+3. Credentials are validated:
+   - If Supabase is available, authentication is performed via Supabase
+   - If Supabase is not available, fallback to local validation with hardcoded credentials
+4. On successful login, the add-in continues normal operation
+5. On failed login, the dialog remains open with an error message
+6. If the user cancels the login, the add-in shuts down
 
-## Setup Instructions
+## Usage in Other Commands
+Other commands should check the login status before executing their functionality:
 
-1. **Install Required Package**
+```python
+from ..Login import entry as login
 
-   ```bash
-   pip install supabase
-   ```
+# In your command_execute function:
+if not login.get_login_status():
+    ui.messageBox("Please log in to use this feature.")
+    return
+    
+# Continue with your command logic if the user is logged in
+```
 
-2. **Configure Supabase Credentials**
+## Testing Without Supabase
+For testing without Supabase, the module accepts the following hardcoded credentials:
+- Email: ata@forgemind.dev
+- Password: test123
 
-   Update the `forgemind-fusion/lib/supabase_config.py` file with your Supabase project details:
-
-   ```python
-   # Supabase URL - replace with your project URL
-   SUPABASE_URL = "https://your-project-id.supabase.co"
-
-   # Supabase API Key - replace with your project's anon key
-   SUPABASE_KEY = "your-supabase-anon-key"
-   ```
-
-   **Important**: Use your project's **anon/public key**, not the service_role key!
-
-3. **Create Users in Supabase**
-
-   - In your Supabase dashboard, go to Authentication > Users
-   - Add users with email and password
-   - Alternatively, use the Supabase Auth API to implement sign-up functionality
-
-## How It Works
-
-1. When the add-in starts, it first displays the login dialog
-2. User enters email and password
-3. The system verifies credentials against Supabase authentication
-4. If valid, the user is authenticated and can use the add-in
-5. If invalid, they see an error message and can retry
-6. If cancel is clicked, the add-in terminates
-
-## Troubleshooting
-
-- If Supabase authentication fails, check your network connection
-- Verify that your Supabase URL and API key are correct
-- Check the logs for detailed error messages
-- Make sure the user exists in your Supabase project
-
-## Security Considerations
-
-- The current implementation only stores the authentication token temporarily in memory
-- For production use, consider implementing:
-  - Secure token storage for "Remember Me" functionality
-  - Token refresh mechanisms
-  - Session timeout handling
-  - Two-factor authentication
-
-## Future Enhancements
-
-- Password reset functionality
-- User registration directly from the add-in
-- Profile management
-- Role-based access control
-- Auto-logout after period of inactivity 
+## Security Notes
+In a production environment, this module should be enhanced with:
+- Secure credential storage for "Remember Me" functionality
+- More robust fallback authentication when Supabase is unavailable
+- Encryption of credentials during transmission
+- Session management and timeout handling 
