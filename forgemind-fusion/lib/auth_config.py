@@ -200,4 +200,37 @@ def clear_session():
     Clears the current session.
     """
     global current_session
-    current_session = None 
+    current_session = None
+
+def get_session_data():
+    """
+    Returns the current session data for persistence.
+    
+    Returns:
+    --------
+    dict or None
+        Session data if available, None otherwise
+    """
+    if current_session:
+        return {
+            "access_token": current_session.get("access_token"),
+            "refresh_token": current_session.get("refresh_token"),
+            "user": current_session.get("user")
+        }
+    return None
+
+def restore_session(session_data):
+    """
+    Restores a previously saved session.
+    
+    Parameters:
+    -----------
+    session_data : dict
+        The session data to restore
+    """
+    global current_session
+    if session_data and "access_token" in session_data:
+        current_session = session_data
+        futil.log("Session restored from saved data")
+        return True
+    return False 
