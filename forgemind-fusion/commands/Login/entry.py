@@ -104,9 +104,18 @@ def validate_credentials(email, password):
     """
     global auth_token
     
+    # Log the email being used (but never log passwords!)
+    futil.log(f"Attempting to validate credentials for email: {email}")
+    
     # Basic validation
     if not email or not password or '@' not in email:
         futil.log("Basic validation failed: invalid email or empty password")
+        if not email:
+            futil.log("Email is empty")
+        if not password:
+            futil.log("Password is empty")
+        if '@' not in email:
+            futil.log("Email does not contain @")
         return False
     
     # If Supabase is not available, use basic validation
@@ -114,7 +123,13 @@ def validate_credentials(email, password):
         futil.log("Warning: Using fallback validation as Supabase is not available")
         # Simple fallback using hardcoded credentials for testing
         # In a production environment, you'd want a more secure fallback
-        return email == "ata@forgemind.dev" and password == "test123"
+        is_valid = email == "ata@forgemind.dev" and password == "test123"
+        if not is_valid:
+            if email != "ata@forgemind.dev":
+                futil.log("Email does not match expected value")
+            else:
+                futil.log("Password does not match expected value")
+        return is_valid
     
     try:
         # Attempt to sign in with Supabase
@@ -332,22 +347,17 @@ def command_destroy(args: adsk.core.CommandEventArgs):
             # Clean up all UI elements
             stop()
             
-            # Terminate the add-in
-            # Use a safer approach to terminate
-            try:
-                adsk.terminate()
-            except RuntimeError:
-                # If there's an error with adsk.terminate(), try a cleaner exit
-                futil.log("Error with adsk.terminate(), using alternative exit")
-                import sys
-                sys.exit(0)
+            # Use sys.exit directly instead of adsk.terminate()
+            import sys
+            sys.exit(0)
+        except SystemExit:
+            # Catch SystemExit and re-raise it
+            raise
         except:
-            futil.log(f"Error terminating add-in: {traceback.format_exc()}")
-            try:
-                adsk.terminate()
-            except:
-                import sys
-                sys.exit(0)
+            futil.log(f"Error during termination: {traceback.format_exc()}")
+            import sys
+            sys.exit(1)  # Exit with error code
+            
     elif not is_logged_in and not login_retry:
         # This covers cases where the dialog might be closed without explicit cancel
         # but also not during a retry for validation failure
@@ -357,20 +367,15 @@ def command_destroy(args: adsk.core.CommandEventArgs):
             from ... import commands
             commands.stop()
             stop()
-            try:
-                adsk.terminate()
-            except RuntimeError:
-                # If there's an error with adsk.terminate(), try a cleaner exit
-                futil.log("Error with adsk.terminate(), using alternative exit")
-                import sys
-                sys.exit(0)
+            import sys
+            sys.exit(0)
+        except SystemExit:
+            # Catch SystemExit and re-raise it
+            raise
         except:
-            futil.log(f"Error terminating add-in: {traceback.format_exc()}")
-            try:
-                adsk.terminate()
-            except:
-                import sys
-                sys.exit(0)
+            futil.log(f"Error during termination: {traceback.format_exc()}")
+            import sys
+            sys.exit(1)  # Exit with error code
 
 # Function to get login status
 def get_login_status():
