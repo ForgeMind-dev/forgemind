@@ -130,11 +130,13 @@ def verify_credentials(email, password):
     """
     global current_session
     
-    response = make_request('/auth/v1/token', {
+    response = make_request('/auth/v1/sign-in', {
         "email": email,
-        "password": password,
-        "grant_type": "password"
+        "password": password
     })
+    
+    # Log the full response for debugging
+    futil.log(f"Auth response: {json.dumps(response)}")
     
     if "access_token" in response:
         # Store the session information
