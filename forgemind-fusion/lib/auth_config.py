@@ -31,21 +31,19 @@ def test_connection():
         (bool, str) - (is_connected, error_message)
     """
     try:
+        # Just check if we can reach the Supabase domain
         req = urllib.request.Request(
-            f"{SUPABASE_URL}/auth/v1/user",
+            SUPABASE_URL,
             method='GET',
             headers={
-                'apikey': SUPABASE_ANON_KEY,
-                'Authorization': f'Bearer {SUPABASE_ANON_KEY}'
+                'apikey': SUPABASE_ANON_KEY
             }
         )
         with urllib.request.urlopen(req) as response:
             return True, None
     except urllib.error.HTTPError as e:
-        if e.code == 404:
-            # A 404 on this path is expected for non-authenticated requests
-            return True, None
-        return False, f"Server error (HTTP {e.code}): {str(e)}"
+        # Any response from Supabase means the service is available
+        return True, None
     except urllib.error.URLError as e:
         return False, f"Connection error: {str(e.reason)}"
     except Exception as e:
@@ -103,7 +101,7 @@ def make_request(endpoint, data=None, method='POST', headers=None):
         # Parse error response if available
         try:
             error_body = json.loads(e.read().decode())
-            error_msg = error_body.get('message', error_body.get('error_description', str(e)))
+            error_msg = error_body.get('error_description', error_body.get('msg', error_body.get('message', str(e))))
             futil.log(f"API error: {error_msg}")
             return {"status": "error", "message": error_msg, "is_valid": False}
         except:
@@ -132,9 +130,10 @@ def verify_credentials(email, password):
     """
     global current_session
     
-    response = make_request('/auth/v1/token?grant_type=password', {
+    response = make_request('/auth/v1/token', {
         "email": email,
-        "password": password
+        "password": password,
+        "grant_type": "password"
     })
     
     if "access_token" in response:
@@ -147,7 +146,7 @@ def verify_credentials(email, password):
         futil.log(f"Authentication successful for user: {email}")
         return True
     else:
-        error_msg = response.get("message", "Unknown error")
+        error_msg = response.get("message", "Invalid credentials")
         futil.log(f"Authentication failed: {error_msg}")
         return False
 
