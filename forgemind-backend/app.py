@@ -28,8 +28,9 @@ client = OpenAI(
 # Create a Supabase client
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
-# Initialize Redis client
-redis_client = Redis(host="localhost", port=6379, db=0)
+# Initialize Redis client - use REDIS_URL for Heroku compatibility
+redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+redis_client = Redis.from_url(redis_url)
 
 app = Flask(__name__)
 # Explicitly allow all origins and support credentials
