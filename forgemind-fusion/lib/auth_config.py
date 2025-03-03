@@ -12,9 +12,11 @@ import urllib.request
 import urllib.error
 from . import fusionAddInUtils as futil
 
-# Backend API URL - Try to get from environment variable or use default
-BACKEND_URL = os.getenv("FORGEMIND_BACKEND_URL", "http://localhost:5000")
-futil.log(f"Using backend URL: {BACKEND_URL}")
+# Supabase Configuration
+SUPABASE_URL = os.getenv("FORGEMIND_BACKEND_URL", "https://euxilwmhugndmualbpcs.supabase.co")
+SUPABASE_ANON_KEY = os.getenv("FORGEMIND_SUPABASE_ANON_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV1eGlsd21odWduZG11YWxicGNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzk5Mzk5ODAsImV4cCI6MjA1NTUxNTk4MH0.XR--n_8IVLWNgvPfnyYu8Z9J1RRbQD6nYvHVtax715U")
+
+futil.log(f"Using Supabase URL: {SUPABASE_URL}")
 
 # Store the current session token
 current_session = None
@@ -30,7 +32,7 @@ def test_connection():
     """
     try:
         req = urllib.request.Request(
-            BACKEND_URL,
+            SUPABASE_URL,
             method='GET'
         )
         with urllib.request.urlopen(req) as response:
@@ -68,16 +70,18 @@ def make_request(endpoint, data=None, method='POST', headers=None):
     # Test connection first
     is_connected, error_msg = test_connection()
     if not is_connected:
-        futil.log(f"Backend server not available: {error_msg}")
+        futil.log(f"Supabase server not available: {error_msg}")
         return {
             "status": "error",
-            "message": f"Backend server not available: {error_msg}",
+            "message": f"Supabase server not available: {error_msg}",
             "is_valid": False
         }
     
-    url = f"{BACKEND_URL}{endpoint}"
+    url = f"{SUPABASE_URL}{endpoint}"
     headers = headers or {}
     headers['Content-Type'] = 'application/json'
+    headers['apikey'] = SUPABASE_ANON_KEY
+    headers['Authorization'] = f'Bearer {SUPABASE_ANON_KEY}'
     
     try:
         if data:
