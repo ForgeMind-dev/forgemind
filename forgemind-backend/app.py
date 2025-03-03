@@ -11,6 +11,7 @@ from openai import OpenAI
 import re
 from redis import Redis
 import json
+from typing import Optional
 
 # Load environment variables from .env file
 load_dotenv()
@@ -38,6 +39,7 @@ CORS(app, resources={r"/*": {"origins": "*"}}, supports_credentials=True)
 class ChatPayload(BaseModel):
     text: str
     user_id: str
+    thread_id: Optional[str] = None  # new optional field
 
 
 @app.route("/chat", methods=["OPTIONS", "POST"])
@@ -74,7 +76,17 @@ def chat():
         .execute()
     )
 
-    thread = client.beta.threads.create()
+    # Use existing thread if provided; otherwise, create a new one.
+    if data.thread_id:
+        thread_id = data.thread_id
+        # Assuming the thread exists; in production, you might verify it.
+    else:
+        # Clear all Redis states for the user
+        redis_client.delete(f"cad_state:{data.user_id}")
+        redis_client.delete(f"status:{data.user_id}")
+        redis_client.delete(f"message:{data.user_id}")
+        thread = client.beta.threads.create()
+        thread_id = thread.id
 
     cad_state = redis_client.get(f"cad_state:{data.user_id}")
     cad_state = cad_state.decode("utf-8") if cad_state else "No CAD state found"
@@ -98,23 +110,23 @@ def chat():
     print("------- Query to LLM   -----------------------")
     print(content)
     print("------- Query Complete -----------------------")
-    # Add a message to the thread
+    # Add a message to the thread using the determined thread_id.
     message = client.beta.threads.messages.create(
-        thread_id=thread.id, role="user", content=content
+        thread_id=thread_id, role="user", content=content
     )
 
-    # Create a run
+    # Create a run using the thread_id.
     run = client.beta.threads.runs.create(
-        thread_id=thread.id, assistant_id="asst_oXIfV78tGu083fATRFRY7HMW"
+        thread_id=thread_id, assistant_id="asst_oXIfV78tGu083fATRFRY7HMW"
     )
 
     # Wait for the run to complete
     while run.status != "completed":
         time.sleep(1)
-        run = client.beta.threads.runs.retrieve(thread_id=thread.id, run_id=run.id)
+        run = client.beta.threads.runs.retrieve(thread_id=thread_id, run_id=run.id)
 
     # Get the messages from the thread
-    messages = client.beta.threads.messages.list(thread_id=thread.id)
+    messages = client.beta.threads.messages.list(thread_id=thread_id)
 
     # Accumulate the assistant's response
     assistant_response = ""
@@ -133,7 +145,7 @@ def chat():
         }
     ).execute()
 
-    return jsonify({"status": "success", "response": assistant_response})
+    return jsonify({"status": "success", "response": assistant_response, "thread_id": thread_id})
 
 
 @app.route("/instruction_result", methods=["POST"])
@@ -145,12 +157,16 @@ def instruction_result():
     status = data.get("status")
 
     if not user_id:
+        print("Missing 0")
         return jsonify({"status": False, "message": "Missing user_id"}), 400
     if not cad_state:
+        print("Missing 1")
         return jsonify({"status": False, "message": "Missing cad_state"}), 400
-    if not message:
+    if not message and status != "success":
+        print("Missing 2")
         return jsonify({"status": False, "message": "Missing message"}), 400
     if not status:
+        print("Missing 3")
         return jsonify({"status": False, "message": "Missing status"}), 400
 
     # Store the result in Redis
@@ -158,7 +174,7 @@ def instruction_result():
         f"cad_state:{user_id}",
         json.dumps(cad_state) if isinstance(cad_state, dict) else cad_state,
     )
-    redis_client.set(f"message:{user_id}", message)
+    redis_client.set(f"message:{user_id}", message or "")
     redis_client.set(f"status:{user_id}", status)
 
     return jsonify({"status": True, "message": "Result stored"})

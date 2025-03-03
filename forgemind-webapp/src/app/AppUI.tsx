@@ -89,8 +89,8 @@ const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
       }
     }
   
-    // 4. Create the new chat using that number
-    const newChat: Chat = { name: `Chat ${nextNumber}`, messages: [] };
+    // 4. Create the new chat using that number, with no threadId yet.
+    const newChat: Chat = { name: `Chat ${nextNumber}`, messages: [], threadId: "" };
     setChats([...chats, newChat]);
     setActiveChatIndex(chats.length);
   }
@@ -114,8 +114,18 @@ const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
     setIsLoading(true);
 
     try {
-      const response = await sendPrompt(text, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b");
+      // Pass the current chat's threadId (if any) to the API call.
+      const response = await sendPrompt(
+        text,
+        "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b",
+        updatedChats[activeChatIndex].threadId
+      );
       const assistantReply = response.response;
+
+      // If the chat didn't already have a threadId, store the new one.
+      if (!updatedChats[activeChatIndex].threadId && response.thread_id) {
+        updatedChats[activeChatIndex].threadId = response.thread_id;
+      }
 
       const isScript =
         assistantReply.includes("function") ||
