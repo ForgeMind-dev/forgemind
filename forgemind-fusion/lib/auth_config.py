@@ -81,12 +81,20 @@ def make_request(endpoint, data=None, method='POST', headers=None):
     
     url = f"{SUPABASE_URL}{endpoint}"
     headers = headers or {}
-    headers['Content-Type'] = 'application/json'
-    headers['apikey'] = SUPABASE_ANON_KEY
+    
+    # Add required Supabase headers
+    headers.update({
+        'Content-Type': 'application/json',
+        'apikey': SUPABASE_ANON_KEY,
+        'X-Client-Info': 'forgemind-fusion',
+    })
     
     try:
         if data:
             data = json.dumps(data).encode('utf-8')
+        
+        futil.log(f"Making request to: {url}")
+        futil.log(f"Request headers: {json.dumps({k: v for k, v in headers.items() if k != 'apikey'})}")
         
         req = urllib.request.Request(
             url,
@@ -130,13 +138,18 @@ def verify_credentials(email, password):
     """
     global current_session
     
-    response = make_request('/auth/v1/sign-in', {
+    # Log the URL we're using (without sensitive data)
+    futil.log(f"Attempting authentication with URL: {SUPABASE_URL}/auth/v1/token?grant_type=password")
+    
+    response = make_request('/auth/v1/token?grant_type=password', {
         "email": email,
-        "password": password
+        "password": password,
+        "gotrue_meta_security": {}  # Required by Supabase auth
     })
     
-    # Log the full response for debugging
-    futil.log(f"Auth response: {json.dumps(response)}")
+    # Log the full response for debugging (excluding sensitive data)
+    sanitized_response = {k: v for k, v in response.items() if k not in ['access_token', 'refresh_token']}
+    futil.log(f"Auth response (sanitized): {json.dumps(sanitized_response)}")
     
     if "access_token" in response:
         # Store the session information
