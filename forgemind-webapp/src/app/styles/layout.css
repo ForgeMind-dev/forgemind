@@ -37,8 +37,8 @@ html, body {
 .app-container {
   position: relative;
   flex: 1;
-  height: calc(100vh - 80px); /* Account for header height */
-  margin-top: 80px; /* Add top margin to account for header */
+  height: calc(100vh - 60px); /* Reduced from 80px to 60px */
+  margin-top: 60px; /* Reduced from 80px to 60px */
   background-color: black; /* black */
   margin-left: 0px;
   transition: margin-left 0.3s ease;
