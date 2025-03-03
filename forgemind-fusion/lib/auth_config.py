@@ -2,7 +2,7 @@
 Authentication Configuration
 
 This file contains the configuration and utilities needed for authentication.
-It communicates with the backend server for user verification and session management.
+It communicates with the Supabase authentication API.
 """
 
 import os
@@ -23,7 +23,7 @@ current_session = None
 
 def test_connection():
     """
-    Tests the connection to the backend server.
+    Tests the connection to the Supabase server.
     
     Returns:
     --------
@@ -32,14 +32,18 @@ def test_connection():
     """
     try:
         req = urllib.request.Request(
-            SUPABASE_URL,
-            method='GET'
+            f"{SUPABASE_URL}/auth/v1/user",
+            method='GET',
+            headers={
+                'apikey': SUPABASE_ANON_KEY,
+                'Authorization': f'Bearer {SUPABASE_ANON_KEY}'
+            }
         )
         with urllib.request.urlopen(req) as response:
             return True, None
     except urllib.error.HTTPError as e:
         if e.code == 404:
-            # A 404 on the root path might be okay - the server is running but the path doesn't exist
+            # A 404 on this path is expected for non-authenticated requests
             return True, None
         return False, f"Server error (HTTP {e.code}): {str(e)}"
     except urllib.error.URLError as e:
@@ -49,7 +53,7 @@ def test_connection():
 
 def make_request(endpoint, data=None, method='POST', headers=None):
     """
-    Makes a request to the backend API.
+    Makes a request to the Supabase API.
     
     Parameters:
     -----------
@@ -81,7 +85,6 @@ def make_request(endpoint, data=None, method='POST', headers=None):
     headers = headers or {}
     headers['Content-Type'] = 'application/json'
     headers['apikey'] = SUPABASE_ANON_KEY
-    headers['Authorization'] = f'Bearer {SUPABASE_ANON_KEY}'
     
     try:
         if data:
@@ -100,15 +103,11 @@ def make_request(endpoint, data=None, method='POST', headers=None):
         # Parse error response if available
         try:
             error_body = json.loads(e.read().decode())
-            error_msg = error_body.get('message', str(e))
-            if e.code == 404:
-                error_msg = f"API endpoint not found: {endpoint}"
+            error_msg = error_body.get('message', error_body.get('error_description', str(e)))
             futil.log(f"API error: {error_msg}")
             return {"status": "error", "message": error_msg, "is_valid": False}
         except:
             error_msg = str(e)
-            if e.code == 404:
-                error_msg = f"API endpoint not found: {endpoint}"
             futil.log(f"HTTP error: {error_msg}")
             return {"status": "error", "message": error_msg, "is_valid": False}
     except Exception as e:
@@ -117,7 +116,7 @@ def make_request(endpoint, data=None, method='POST', headers=None):
 
 def verify_credentials(email, password):
     """
-    Verifies user credentials with the backend server.
+    Verifies user credentials with Supabase authentication.
     
     Parameters:
     -----------
@@ -133,23 +132,28 @@ def verify_credentials(email, password):
     """
     global current_session
     
-    response = make_request('/auth/verify', {
+    response = make_request('/auth/v1/token?grant_type=password', {
         "email": email,
         "password": password
     })
     
-    if response.get("is_valid", False):
+    if "access_token" in response:
         # Store the session information
-        current_session = response.get("session", {})
+        current_session = {
+            "access_token": response["access_token"],
+            "refresh_token": response.get("refresh_token"),
+            "user": response.get("user", {})
+        }
         futil.log(f"Authentication successful for user: {email}")
         return True
     else:
-        futil.log(f"Authentication failed: {response.get('message', 'Unknown error')}")
+        error_msg = response.get("message", "Unknown error")
+        futil.log(f"Authentication failed: {error_msg}")
         return False
 
 def validate_session():
     """
-    Validates the current session with the backend server.
+    Validates the current session with Supabase.
     
     Returns:
     --------
@@ -163,8 +167,8 @@ def validate_session():
         "Authorization": f"Bearer {current_session['access_token']}"
     }
     
-    response = make_request('/auth/validate-session', method='POST', headers=headers)
-    return response.get("is_valid", False)
+    response = make_request('/auth/v1/user', method='GET', headers=headers)
+    return "id" in response
 
 def get_current_user():
     """
