@@ -156,9 +156,12 @@ def verify_credentials(email, password):
         current_session = {
             "access_token": response["access_token"],
             "refresh_token": response.get("refresh_token"),
-            "user": response.get("user", {})
+            "user": response.get("user", {}),
+            "expires_in": response.get("expires_in"),
+            "expires_at": response.get("expires_at")
         }
         futil.log(f"Authentication successful for user: {email}")
+        futil.log("Session data stored successfully")
         return True
     else:
         error_msg = response.get("message", "Invalid credentials")
@@ -233,4 +236,17 @@ def restore_session(session_data):
         current_session = session_data
         futil.log("Session restored from saved data")
         return True
-    return False 
+    return False
+
+def get_auth_token():
+    """
+    Returns the current authentication token.
+    
+    Returns:
+    --------
+    str or None
+        The current authentication token, or None if not available
+    """
+    if current_session and "access_token" in current_session:
+        return current_session["access_token"]
+    return None 

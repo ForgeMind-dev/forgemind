@@ -18,6 +18,7 @@ from ...lib import fusionAddInUtils as futil
 import threading
 import urllib.request
 from ..Login import entry as login
+from ...lib import auth_config
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -130,7 +131,25 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     def get_logic():
         while polling_active:  # Use flag to control polling
             try:
-                response = urllib.request.urlopen('http://localhost:3000/poll')
+                # Use the Supabase backend URL instead of localhost
+                backend_url = auth_config.BACKEND_URL
+                poll_url = f"{backend_url}/poll"
+                
+                futil.log(f"Polling for commands at: {poll_url}")
+                
+                # Get the auth token to include in the request
+                auth_token = auth_config.get_auth_token()
+                
+                # Create a request with the authorization header
+                req = urllib.request.Request(poll_url)
+                if auth_token:
+                    req.add_header('Authorization', f'Bearer {auth_token}')
+                req.add_header('Content-Type', 'application/json')
+                req.add_header('X-Client-Info', 'forgemind-fusion')
+                
+                # Make the authenticated request
+                response = urllib.request.urlopen(req)
+                
                 if response.getcode() == 200:
                     logic = response.read().decode('utf-8')
                     futil.log('Running logic: ' + logic)
@@ -138,12 +157,12 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
                 else:
                     futil.log(f'Poll request returned status code {response.getcode()}')
             except urllib.error.URLError as e:
-                futil.log(f'Error polling localhost:3000: {e}')
+                futil.log(f'Error polling {poll_url}: {e}')
             except Exception as e:
                 futil.log(f'Unexpected error during polling: {str(e)}')
             
             # Wait before next poll
-            time.sleep(1)  # Poll every second
+            time.sleep(3)  # Poll every 3 seconds to reduce load
 
     # Start polling in a separate thread
     polling_thread = threading.Thread(target=get_logic, daemon=True)
@@ -159,12 +178,15 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 def command_execute(args: adsk.core.CommandEventArgs):
     futil.log(f"entry.py::command_execute - {CMD_NAME} Command Execute Event")
     
-    # No need to check login status again as we already did in command_created
-    # Just log that polling is in progress
-    futil.log("Polling is now active - checking for commands at http://localhost:3000/poll")
+    # Get backend URL for display
+    backend_url = auth_config.SUPABASE_URL
+    poll_url = f"{backend_url}/poll"
     
-    # No need to show a message dialog
-    # Keep execution minimal to avoid disrupting user workflow
+    # Log polling information
+    futil.log(f"Polling is now active - checking for commands at {poll_url}")
+    
+    # Show a minimal message indicating polling is active
+    ui.messageBox(f"ForgeMind Add-in is connected and polling for commands.\n\nBackend URL: {backend_url}", "ForgeMind Status")
 
 
 # This function will be called when the user completes the command.
