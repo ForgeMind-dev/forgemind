@@ -27,7 +27,7 @@ def get_workspace_state():
                 body_info = {
                     "name": body.name,
                     "volume": body.volume,
-                    "surface_area": body.surfaceArea,
+                    "surface_area": body.area,  # Fixed the error here
                     "bounding_box": {
                         "min_point": body.boundingBox.minPoint.asArray(),
                         "max_point": body.boundingBox.maxPoint.asArray()
@@ -43,8 +43,8 @@ def get_workspace_state():
 
                 for profile in sketch.profiles:
                     profile_info = {
-                        "area": profile.areaProperties.area,
-                        "perimeter": profile.areaProperties.perimeter
+                        "area": profile.areaProperties().area,
+                        "perimeter": profile.areaProperties().perimeter
                     }
                     sketch_info["profiles"].append(profile_info)
 
@@ -86,13 +86,13 @@ def run_logic(logic: str) -> dict:
         # # Add a circle at the center of one of the existing circles.
         # circle3 = circles.addByCenterRadius(circle2.centerSketchPoint, 4)
         return {
+            **get_workspace_state(),
             'status': 'success',
-            'workspace_state': get_workspace_state()
         }
     except Exception as error:
         futil.log('Error: ' + str(error))
         return {
             'status': 'error',
             'message': str(error),
-            'workspace_state': get_workspace_state()
+            **get_workspace_state()
         }
