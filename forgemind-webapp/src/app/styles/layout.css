@@ -1,45 +1,105 @@
 /* Layout Styles */
 
-.app-wrapper {
-  position: relative;
-  width: 100%;
-  flex: 1;
+/* Global scrolling prevention - ONLY for dashboard */
+html.dashboard-page, body.dashboard-page {
   overflow: hidden;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+/* Default styles for regular pages that need scrolling */
+html, body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+.app-wrapper {
+  position: relative; /* Change to relative by default */
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   background-color: #000; /* black background */
 }
+
+/* Apply fixed positioning only on dashboard page */
+.dashboard-page .app-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 100vh; /* Full viewport height */
+  overflow: hidden;
+}
   
-  .app-container {
-    flex: 1;
-    background-color: black; /* black */
-    margin-left: 0px;     /* so content starts after the 250px sidebar */
-    transition: margin-left 0.3s ease;
-    display: flex;
-    flex-direction: column;
-  }
-  .app-container.sidebar-open {
-    margin-left: 250px; /* match sidebar width */
-    width: calc(100% - 250px);
-  }
+.app-container {
+  position: relative;
+  flex: 1;
+  height: calc(100vh - 80px); /* Account for header height */
+  margin-top: 80px; /* Add top margin to account for header */
+  background-color: black; /* black */
+  margin-left: 0px;
+  transition: margin-left 0.3s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Only prevent scrolling in the dashboard container */
+.dashboard-page .app-container {
+  overflow: hidden;
+}
+
+/* UPDATED: Only apply margin to messages-container when sidebar is open, not the entire app-container */
+.app-container.sidebar-open {
+  margin-left: 0; /* Reset margin */
+  width: 100%; /* Full width */
+}
+
+/* Add margin only to the messages-container when sidebar is open */
+.app-container.sidebar-open .messages-container {
+  margin-left: 250px; /* match sidebar width */
+  width: calc(100% - 250px);
+}
+
+/* Center content should remain centered regardless of sidebar state */
+.app-container.sidebar-open .center-content {
+  margin-left: 0;
+  width: 100%;
+}
   
-  .menu-btn {
-    position: absolute;
-    top: 16px;
-    left: 16px;
-    background: none;
-    border: none;
-    color: #fff;
-    font-size: 24px;
-    cursor: pointer;
-  }
+.menu-btn {
+  position: absolute;
+  top: 6px;
+  left: 16px;
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+/* Sidebar styles */
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 100vh;
+  width: 250px;
+  background-color: #111;
+  transition: transform 0.3s ease;
+  z-index: 100;
+  overflow-y: auto; /* Allow scrolling within sidebar if needed */
+  overflow-x: hidden;
+  padding-top: 80px; /* Increased space for header */
+}
+
+.sidebar.closed {
+  transform: translateX(-100%);
+}
   
-  .cad-connection-container {
-    position: absolute;
-    top: 16px;
-    right: 16px;
-    display: flex;
-  }
-  
-  /* Responsive adjustments for small window sizes */
+/* Responsive adjustments for small window sizes */
 @media (max-width: 800px) and (max-height: 300px) {
   /* Adjust header logo size */
   .header-logo img {
@@ -84,9 +144,6 @@
   /* Bottom Bar adjustments */
   .chat-bubble {
     padding: 4px 8px;
-  }
-  .chat-bubble-input {
-    font-size: 12px;
   }
   .chat-bubble-send-btn {
     font-size: 16px;

@@ -55,19 +55,19 @@ const Hero = () => {
         </motion.h1>
 
         {/* Subheading with Rotating Text */}
-        <div className='hero-subtitle-container'>
-          <motion.p
-            className="hero-subtitle"
-            initial={{ opacity: 0, y: 40 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.4 }}
-          >
-            Accelerate mechanical design in{' '}
-            <span className="rotating-highlight">
+        <motion.div
+          className="hero-subtitle-container"
+          initial={{ opacity: 0, y: 40 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 0.4 }}
+        >
+          <div className="hero-subtitle">
+            <span className="fixed-text">Accelerate mechanical design in</span>
+            <div className="rotating-highlight">
               <RotatingText items={cadPlatforms} interval={1500} />
-            </span>
-          </motion.p>
-        </div>
+            </div>
+          </div>
+        </motion.div>
 
         {/* Conditional rendering based on user state */}
         {user ? (
