@@ -51,11 +51,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     return () => clearInterval(interval);
   }, [isLoading, baseText]);
 
-  const messagesToShow = currentChat.messages.length ? currentChat.messages : [{ role: "ai", content: "How can I help you?" }];
+  // If there are no messages, show the empty state
+  if (!currentChat.messages.length) {
+    return (
+      <div className="center-content">
+        <h1>What can I help with?</h1>
+      </div>
+    );
+  }
 
+  // Otherwise show the messages
   return (
     <div ref={messagesEndRef} className="messages-container">
-      {messagesToShow.map((msg, idx) =>
+      {currentChat.messages.map((msg, idx) =>
         msg.role === "user" ? (
           <div key={idx} className="msg user-msg">
             {msg.content}

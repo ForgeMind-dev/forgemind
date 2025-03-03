@@ -5,35 +5,48 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   align-items: center;
+  height: 100%;
+  padding-top: 28vh; /* Adjusted to better match the image */
 }
-  .main-logo {
-    width: 300px;
-    height: auto;
-    margin-bottom: 40px;
-  }
-  .center-content h1 {
-    font-size: 17px;
-    color: #fff; /* white text */
-  }
-  
-  /* MESSAGES: displayed after first user message in a chat */
-  .messages-container {
-    flex: 1;
-    width: 100%;
-    height: 100%;
-    overflow-y: auto;
-    padding: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding-top: 20px;
-    padding-bottom: 120px;
-    background-color: #000; /* black */
-  }
-  
-  /* Message bubble styles */
+
+/* Only prevent scrolling in dashboard */
+.dashboard-page .center-content {
+  overflow: hidden;
+}
+
+.center-content h1 {
+  font-size: 2rem;
+  color: #fff; /* white text */
+  font-weight: 500;
+  margin-bottom: 5rem; /* Adjusted for better spacing with the input field */
+}
+
+.main-logo {
+  width: 300px;
+  margin-bottom: 40px;
+}
+
+/* MESSAGES: displayed after first user message in a chat */
+.messages-container {
+  position: relative;
+  flex: 1;
+  width: 100%;
+  height: calc(100% - 80px); /* Account for bottom bar */
+  overflow-y: auto; /* Only the messages should scroll */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 30px; /* Reduced from 80px to 30px to minimize empty space at the top */
+  padding-bottom: 100px; /* Ensure messages aren't hidden behind the bottom bar */
+  background-color: #000; /* black */
+  -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
+}
+
+/* Message bubble styles */
 /* Message bubbles */
 .msg {
   display: inline-block;          /* Ensures the bubble width adjusts to text */
@@ -56,33 +69,33 @@
   text-align: left;
 }
   
-  .ai-msg strong {
-    font-weight: bold;
-  }
+.ai-msg strong {
+  font-weight: bold;
+}
   
-  .ai-msg ol, .ai-msg ul {
-    padding-left: 20px;
-    margin: 8px 3px;
-  }
+.ai-msg ol, .ai-msg ul {
+  padding-left: 20px;
+  margin: 8px 3px;
+}
   
-  .ai-msg li {
-    margin-bottom: 5px;
-  }
+.ai-msg li {
+  margin-bottom: 5px;
+}
   
-  .ai-msg ul li {
-    list-style-type: disc;
-  }
+.ai-msg ul li {
+  list-style-type: disc;
+}
   
-  .ai-msg p {
-    margin: 6px 6px 6px;
-  }
+.ai-msg p {
+  margin: 6px 6px 6px;
+}
 
-  .loading-bubble {
-    display: flex;
-    align-items: center;
-  }
+.loading-bubble {
+  display: flex;
+  align-items: center;
+}
   
-  /* AI text styling: centered, no bubble, clean markdown display */
+/* AI text styling: centered, no bubble, clean markdown display */
 .ai-text {
   text-align: center;
   font-family: 'Inter', sans-serif;
@@ -100,5 +113,4 @@
   max-width: 50%;
   margin-bottom: 8px;
 }
-
   
