@@ -7,6 +7,7 @@ import OptimizeModal from "./components/OptimizeModal";
 import RefineModal from "./components/RefineModal";
 import RelationsModal from "./components/RelationsModal";
 import { sendPrompt } from "./api";
+import Header from "../components/layout/Header";
 
 // Import modular CSS
 import "./styles/reset.css";
@@ -25,8 +26,12 @@ import { Chat, Message } from "./types";
 const OPENAI_API_KEY = process.env.REACT_APP_OPENAI_API_KEY;
 const MODEL = "gpt-4o";
 
-const App: React.FC = () => {
-  const [sidebarOpen, setSidebarOpen] = useState<boolean>(false);
+interface AppProps {
+  onToggleSidebar: () => void;
+  sidebarOpen: boolean;
+}
+
+const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
   const [chats, setChats] = useState<Chat[]>([{ name: "Chat 1", messages: [] }]);
   const [activeChatIndex, setActiveChatIndex] = useState<number>(0);
   const [input, setInput] = useState<string>("");
@@ -46,8 +51,6 @@ const App: React.FC = () => {
   const [customCAD, setCustomCAD] = useState<string>("");
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   // Use optional chaining to safely access messages
   const showLogo = chats[activeChatIndex]?.messages?.length > 0;

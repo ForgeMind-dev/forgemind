@@ -17,7 +17,6 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
   React.useEffect(() => {
     const getUser = async () => {
       const { data } = await supabase.auth.getUser();
-      console.log('FURGO', data);
       setUser(data.user);
     };
     getUser();
@@ -27,9 +26,9 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
     <header className="header">
       {/* Menu button, absolutely positioned on the left */}
       <div className="menu-btn-container">
-        <button className="menu-btn" onClick={onToggleSidebar}>
+        {onToggleSidebar && <button className="menu-btn" onClick={onToggleSidebar}>
           &#9776;
-        </button>
+        </button>}
       </div>
       {/* Left Section: Logo */}
       <div className="navigation">
