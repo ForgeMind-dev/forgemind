@@ -2,13 +2,11 @@
 
 /* CENTER CONTENT (Landing Screen) */
 .center-content {
-  width: 100%;
-  height: calc(100% - 0px);
+  flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  background-color: #000; /* black */
 }
   .main-logo {
     width: 300px;
@@ -40,9 +38,9 @@
 .msg {
   display: inline-block;          /* Ensures the bubble width adjusts to text */
   max-width: 60%;                /* Wrap long text, leaving some space on the side */
-  padding: 7px 10px;             /* Less top/bottom padding for a shorter bubble */
+  padding: 8px 8px;             /* Less top/bottom padding for a shorter bubble */
   border-radius: 15px;
-  margin-bottom: 1px;            /* Slightly smaller gap between messages */
+  margin-bottom: 2px;            /* Slightly smaller gap between messages */
   white-space: pre-wrap;         
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -51,7 +49,7 @@
   line-height: 1.1;              /* Slightly reduced line spacing */
 }
   
-.ai-msg {
+.msg {
   align-self: flex-start;          /* bubble on the left */
   background-color: #333;          /* dark gray bubble */
   color: #fff;
@@ -76,7 +74,7 @@
   }
   
   .ai-msg p {
-    margin: 0 0 10px;
+    margin: 6px 6px 6px;
   }
 
   .loading-bubble {
@@ -98,7 +96,6 @@
   align-self: flex-end;
   background-color: #7a96ee;
   color: #fff;
-  padding: 10px;
   border-radius: 15px;
   max-width: 50%;
   margin-bottom: 8px;

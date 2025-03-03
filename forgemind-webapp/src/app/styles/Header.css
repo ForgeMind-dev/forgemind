@@ -13,6 +13,10 @@
   justify-content: center; /* The entire container is centered content */
 }
 
+.menu-btn-container {
+  flex: 1;
+}
+
 /* Menu button on the left */
 .menu-btn {
   position: absolute;

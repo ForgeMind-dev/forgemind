@@ -13,7 +13,7 @@ import time
 import adsk.core, adsk.fusion, adsk.cam
 import os
 from ... import config
-from ...logic import run_logic
+from ...logic import run_logic, get_workspace_state
 from ...lib import fusionAddInUtils as futil
 import threading
 import json
@@ -43,29 +43,9 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource
 local_handlers = []
 
 
-def get_workspace_description():
-    design = adsk.fusion.Design.cast(app.activeProduct)
-
-    if not design:
-        futil.log("entry.py::get_workspace_description - No active Fusion 360 design")
-        return None
-
-    description = {"name": design.parentDocument.name, "components": []}
-
-    for comp in design.allComponents:
-        comp_info = {
-            "name": comp.name,
-            "bodies": [body.name for body in comp.bRepBodies],
-            "sketches": [sketch.name for sketch in comp.sketches],
-        }
-        description["components"].append(comp_info)
-
-    return {"cad_state": description}
-
-
 def get_logic():
     # Get workspace description
-    workspace_desc = get_workspace_description()
+    workspace_desc = get_workspace_state()
     json_payload = json.dumps(workspace_desc).encode("utf-8")
 
     # Call /poll first with workspace description
@@ -112,7 +92,8 @@ def get_logic():
         return
 
     futil.log(f"entry.py::get_logic - get_instructions returned logic:\n\n[\n{logic}\n]")
-    run_logic(logic)
+    
+    run_logic_result = run_logic(logic)
 
 
 # New function to run get_logic every 10 seconds.

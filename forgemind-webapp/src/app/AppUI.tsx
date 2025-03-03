@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import Header from "./components/Header";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import BottomBar from "./components/BottomBar";
@@ -239,8 +238,6 @@ const App: React.FC = () => {
 
   return (
     <div className="app-wrapper">
-      <Header onToggleSidebar={toggleSidebar} showLogo={showLogo} />
-
       <div className={sidebarOpen ? "sidebar open" : "sidebar closed"}>
         {sidebarOpen && (
           <Sidebar

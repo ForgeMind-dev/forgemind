@@ -3,8 +3,29 @@ from adsk.core import Application, UserInterface
 from ..lib import fusionAddInUtils as futil
 import math
 
-def run_logic(logic: str):
-    ui = None
+app = adsk.core.Application.get()
+ui = app.userInterface
+
+def get_workspace_state():
+    design = adsk.fusion.Design.cast(app.activeProduct)
+
+    if not design:
+        futil.log("entry.py::get_workspace_description - No active Fusion 360 design")
+        return None
+
+    description = {"name": design.parentDocument.name, "components": []}
+
+    for comp in design.allComponents:
+        comp_info = {
+            "name": comp.name,
+            "bodies": [body.name for body in comp.bRepBodies],
+            "sketches": [sketch.name for sketch in comp.sketches],
+        }
+        description["components"].append(comp_info)
+
+    return {"cad_state": description, "user_id": 'FURGO'}
+
+def run_logic(logic: str) -> dict:
     try:
         futil.log('Running logic')
         futil.log(logic)
@@ -32,8 +53,13 @@ def run_logic(logic: str):
 
         # # Add a circle at the center of one of the existing circles.
         # circle3 = circles.addByCenterRadius(circle2.centerSketchPoint, 4)
-        
+        return {
+            'status': 'success',
+            'workspace_state': get_workspace_state()
+        }
     except Exception as error:
         futil.log('Error: ' + str(error))
-        if ui:
-            ui.messageBox('Failed:\n{}'.format(traceback.format_exc()))
+        return {
+            'status': 'error',
+            'message': str(error)
+        }

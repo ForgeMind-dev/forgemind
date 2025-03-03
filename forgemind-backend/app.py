@@ -10,6 +10,7 @@ from pydantic import BaseModel, ValidationError
 from openai import OpenAI
 import re
 from redis import Redis
+import json
 
 # Load environment variables from .env file
 load_dotenv()
@@ -113,14 +114,40 @@ def chat():
     return jsonify({"status": "success", "response": assistant_response})
 
 
+@app.route("/instruction_result", methods=["POST"])
+def instruction_result():
+    data = request.get_json()
+    user_id = data.get("user_id")
+    cad_state = data.get("cad_state")
+    message = data.get("message")
+    status = data.get("status")
+    if not user_id:
+        return jsonify({"status": False, "message": "Missing user_id"}), 400
+    if not cad_state:
+        return jsonify({"status": False, "message": "Missing cad_state"}), 400
+    if not message:
+        return jsonify({"status": False, "message": "Missing message"}), 400
+    if not status:
+        return jsonify({"status": False, "message": "Missing status"}), 400
+
+    # Store the result in Redis
+    redis_client.set(f"cad_state:{user_id}", json.dumps(cad_state) if isinstance(cad_state, dict) else cad_state)
+    redis_client.set(f"message:{user_id}", message)
+    redis_client.set(f"status:{user_id}", status)
+
+    return jsonify({"status": True, "message": "Result stored"})
+
 @app.route("/poll", methods=["POST"])
 def poll():
     data = request.get_json()
     cad_state = data.get("cad_state")
+    user_id = data.get("user_id")
     
+    if not user_id:
+        return jsonify({"status": False, "message": "Missing user_id"}), 400
     # Store cad_state in Redis
     if cad_state:
-        redis_client.set(f"cad_state:{data['user_id']}", cad_state)
+        redis_client.set(f"cad_state:{user_id}", json.dumps(cad_state) if isinstance(cad_state, dict) else cad_state)
     
     # Retrieve one pending operation
     pending_ops = (

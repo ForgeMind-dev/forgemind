@@ -1,13 +1,16 @@
 .hero {
   position: relative;
   width: 100%;
-  min-height: 90vh; /* Enough space to be impactful */
-  background-color: #000; /* Dark background */
+  min-height: 90vh;
+  /* Enough space to be impactful */
+  background-color: #000;
+  /* Dark background */
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  padding: 80px 20px; /* Extra top padding to avoid overlapping header */
+  padding: 80px 20px;
+  /* Extra top padding to avoid overlapping header */
 }
 
 .hero-content {
@@ -29,6 +32,7 @@
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -48,12 +52,21 @@
   display: inline-block;
 }
 
+.hero-subtitle-container {
+  display: flex;
+  justify-content: center;
+}
+
 .hero-subtitle {
+  text-align: left;
+  max-width: 100%;
+  width: 100%;
   margin-top: 30px;
   font-size: 1.25rem;
   font-weight: 500;
   margin-bottom: 1rem;
-  color: #ccc; /* Slightly lighter than white for contrast */
+  color: #ccc;
+  /* Slightly lighter than white for contrast */
 }
 
 /* New extra text style */
@@ -94,11 +107,25 @@
   .hero-title {
     font-size: 2.5rem;
   }
+
   .hero-subtitle {
     font-size: 1.2rem;
   }
+
   .animated-icon {
     width: 60px;
     height: 60px;
   }
+}
+
+.hero-dashboard-btn {
+  margin: 20px;
+  background-color: #a9c1f2;
+  color: #000;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.3s ease;
 }
