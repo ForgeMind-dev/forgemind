@@ -9,14 +9,29 @@ Consider using environment variables or a secure configuration manager.
 """
 
 import os
+import sys
 from . import fusionAddInUtils as futil
 
 # Flag to track if Supabase features are available
 SUPABASE_ENABLED = False
 
+# Store the Client class and create_client function for use if available
+create_client_func = None
+Client_class = None
+
 # Try to import Supabase to check if it's available
 try:
-    from supabase import create_client, Client
+    from supabase import create_client
+    # Store create_client function in variable to avoid issues with type hints
+    create_client_func = create_client
+    
+    # Only try to import Client if create_client is successful
+    try:
+        from supabase import Client
+        Client_class = Client
+    except ImportError:
+        futil.log("Supabase Client class not available but create_client is - this is unusual")
+    
     SUPABASE_ENABLED = True
     futil.log("Supabase package is available")
 except ImportError:
@@ -31,9 +46,9 @@ SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJ
 
 # Initialize Supabase client if possible
 supabase = None
-if SUPABASE_ENABLED:
+if SUPABASE_ENABLED and create_client_func:
     try:
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        supabase = create_client_func(SUPABASE_URL, SUPABASE_KEY)
         futil.log(f"Supabase client initialized with URL: {SUPABASE_URL}")
     except Exception as e:
         futil.log(f"Error initializing Supabase client: {str(e)}")
@@ -49,7 +64,7 @@ def get_client():
     
     Returns:
     --------
-    Client or None
+    object
         The Supabase client if available, None otherwise
     """
     return supabase

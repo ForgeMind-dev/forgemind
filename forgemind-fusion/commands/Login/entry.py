@@ -42,7 +42,7 @@ Security Notes:
 app = adsk.core.Application.get()
 ui = app.userInterface
 
-# Supabase client reference
+# Supabase client reference - using var annotation instead of type annotation
 supabase = supabase_config.get_client()
 auth_token = None
 
@@ -333,10 +333,21 @@ def command_destroy(args: adsk.core.CommandEventArgs):
             stop()
             
             # Terminate the add-in
-            adsk.terminate()
+            # Use a safer approach to terminate
+            try:
+                adsk.terminate()
+            except RuntimeError:
+                # If there's an error with adsk.terminate(), try a cleaner exit
+                futil.log("Error with adsk.terminate(), using alternative exit")
+                import sys
+                sys.exit(0)
         except:
             futil.log(f"Error terminating add-in: {traceback.format_exc()}")
-            adsk.terminate()  # Make sure we terminate even if there's an error
+            try:
+                adsk.terminate()
+            except:
+                import sys
+                sys.exit(0)
     elif not is_logged_in and not login_retry:
         # This covers cases where the dialog might be closed without explicit cancel
         # but also not during a retry for validation failure
@@ -346,10 +357,20 @@ def command_destroy(args: adsk.core.CommandEventArgs):
             from ... import commands
             commands.stop()
             stop()
-            adsk.terminate()
+            try:
+                adsk.terminate()
+            except RuntimeError:
+                # If there's an error with adsk.terminate(), try a cleaner exit
+                futil.log("Error with adsk.terminate(), using alternative exit")
+                import sys
+                sys.exit(0)
         except:
             futil.log(f"Error terminating add-in: {traceback.format_exc()}")
-            adsk.terminate()
+            try:
+                adsk.terminate()
+            except:
+                import sys
+                sys.exit(0)
 
 # Function to get login status
 def get_login_status():
