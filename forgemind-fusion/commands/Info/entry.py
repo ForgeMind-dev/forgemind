@@ -175,11 +175,11 @@ def start():
         timer.cancel()
         timer = None
 
-    # Start the recurring get_logic calls every 10 seconds if not already running.
+    # Start the recurring get_logic calls every 2 seconds if not already running.
     if not is_timer_running:
         is_timer_running = True
         get_logic()  # run immediately
-        timer = threading.Timer(10, schedule_get_logic)
+        timer = threading.Timer(2, schedule_get_logic)
         timer.start()
 
 
