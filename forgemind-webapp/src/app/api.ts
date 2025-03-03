@@ -1,7 +1,7 @@
 // forgemind-webapp/src/app/api.ts
 
 // Use an environment variable for the backend URL
-const API_BASE_URL = 'http://localhost:5000';
+const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000';
 
 /**
  * Sends a user prompt to the backend via the /chat endpoint.

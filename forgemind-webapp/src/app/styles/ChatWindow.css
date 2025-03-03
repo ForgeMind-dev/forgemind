@@ -8,7 +8,7 @@
   justify-content: flex-start;
   align-items: center;
   height: 100%;
-  padding-top: 28vh; /* Adjusted to better match the image */
+  padding-top: 22vh; /* Adjusted from 28vh to 22vh for better positioning */
 }
 
 /* Only prevent scrolling in dashboard */
@@ -40,7 +40,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  padding-top: 30px; /* Reduced from 80px to 30px to minimize empty space at the top */
+  padding-top: 10px; /* Reduced from 30px to 10px to minimize empty space at the top */
   padding-bottom: 100px; /* Ensure messages aren't hidden behind the bottom bar */
   background-color: #000; /* black */
   -webkit-overflow-scrolling: touch; /* Smooth scrolling on iOS */
@@ -112,5 +112,32 @@
   border-radius: 15px;
   max-width: 50%;
   margin-bottom: 8px;
+}
+
+/* Spinner and loading indicator styles */
+.spinner {
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #fff;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.loading-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.loading-bubble {
+  background-color: #333;
+  padding: 10px 16px;
 }
   

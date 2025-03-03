@@ -21,6 +21,64 @@ interface AppProps {
   sidebarOpen: boolean;
 }
 
+// Function to check if a message contains Python code for CAD
+function containsPythonCADCode(message: string): boolean {
+  // Keywords and patterns typically found in Python CAD code
+  const pythonPatterns = [
+    // Imports for different CAD systems
+    "import cadquery",
+    "import FreeCAD",
+    "import adsk.core",
+    "import adsk.fusion",
+    "import adsk.cam",
+    
+    // Function definitions
+    "def create_",
+    "def run(",
+    "def build_",
+    "def generate_",
+    
+    // Variable assignments common in CAD code
+    "result = ",
+    "solid = ",
+    "= FreeCAD.",
+    
+    // Fusion 360 app initialization
+    "app = adsk.core",
+    "Application.get()",
+    "design = app.activeProduct",
+    "rootComp = design.rootComponent",
+    
+    // Common geometry methods
+    "circle(",
+    "extrude(",
+    "revolve(",
+    "sweep(",
+    "loft(",
+    "shell(",
+    "torus(",
+    "addByCenterRadius(",
+    "addByTwoPoints(",
+    "addByCenterStartEnd(",
+    "revolveFeatures",
+    "extrudeFeatures",
+    "createInput(",
+    "sketchCurves",
+    "constructionPlane",
+
+    // Other common patterns
+    "sketches.add",
+    "features.",
+    "Point3D.create",
+    "ValueInput.createByReal",
+    "FeatureOperations",
+    "profiles.item"
+  ];
+  
+  // Check if the message contains any of the patterns
+  return pythonPatterns.some(pattern => message.includes(pattern));
+}
+
 const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
   const [chats, setChats] = useState<Chat[]>([{ name: "Chat 1", messages: [] }]);
   const [activeChatIndex, setActiveChatIndex] = useState<number>(0);
@@ -72,10 +130,18 @@ const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
         updatedChats[activeChatIndex].threadId = aiResponse.thread_id;
       }
 
+      // Get the response text
+      let responseText = aiResponse?.response || "Sorry, there was an error processing your request.";
+      
+      // Check if the response contains Python CAD code and replace it if necessary
+      if (containsPythonCADCode(responseText)) {
+        responseText = "Done, is there anything else you'd like me to design or modify?";
+      }
+
       // Create AI message
       const aiMessage: Message = {
         role: "assistant",
-        content: aiResponse?.response || "Sorry, there was an error processing your request.",
+        content: responseText,
       };
 
       // Add AI message to chat
