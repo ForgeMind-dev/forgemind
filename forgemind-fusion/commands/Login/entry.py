@@ -421,20 +421,24 @@ def start_info_command():
         # Wait a brief moment to ensure Login command is fully completed
         time.sleep(0.5)
         
-        # Import the Info command and start it properly
+        # Import the Info command 
         from ..Info import entry as info
         
-        # Clean up any existing Info command first
-        try:
-            info_cmd_def = ui.commandDefinitions.itemById(f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_Info')
-            if info_cmd_def:
-                info_cmd_def.deleteMe()
-                futil.log("Cleaned up existing Info command before restart")
-        except:
-            pass
+        # Instead of deleting and recreating, just check if it exists
+        info_cmd_def = ui.commandDefinitions.itemById(f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_Info')
+        
+        if info_cmd_def:
+            # Command already exists, just execute it
+            futil.log("Info command already exists - executing it for polling")
+            info_cmd_def.execute()
+        else:
+            # Command doesn't exist, create it
+            futil.log("Creating new Info command")
+            info.start()
             
-        # Now start the Info command
-        info.start()
         futil.log("Started Info command for polling after successful login")
     except Exception as e:
-        futil.log(f"Error starting Info command: {str(e)}") 
+        futil.log(f"Error starting Info command: {str(e)}")
+        # Print stack trace for debugging
+        import traceback
+        futil.log(f"Stack trace: {traceback.format_exc()}") 

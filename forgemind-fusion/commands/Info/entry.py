@@ -114,10 +114,17 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     global polling_active
     
     # First check if user is logged in before starting polling
-    if not login.is_logged_in:
-        futil.log("User not logged in - not starting polling")
-        return
+    try:
+        # Check if the login module indicates we're logged in
+        is_logged_in = login.get_login_status()
+        if not is_logged_in:
+            futil.log("User not logged in - not starting polling")
+            return
+    except Exception as e:
+        # If any error occurs checking login status, log it but continue
+        futil.log(f"Error checking login status: {str(e)}")
         
+    # Mark polling as active
     polling_active = True
 
     def get_logic():
@@ -152,14 +159,12 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 def command_execute(args: adsk.core.CommandEventArgs):
     futil.log(f"entry.py::command_execute - {CMD_NAME} Command Execute Event")
     
-    # Check if user is logged in before proceeding
-    if not login.get_login_status():
-        ui.messageBox("Please log in to use this feature.")
-        return
-        
-    # Rest of your existing command execution code...
-    msg = f'Running that shit'
-    ui.messageBox(msg)
+    # No need to check login status again as we already did in command_created
+    # Just log that polling is in progress
+    futil.log("Polling is now active - checking for commands at http://localhost:3000/poll")
+    
+    # No need to show a message dialog
+    # Keep execution minimal to avoid disrupting user workflow
 
 
 # This function will be called when the user completes the command.
