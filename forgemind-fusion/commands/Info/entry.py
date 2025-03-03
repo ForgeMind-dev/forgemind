@@ -17,6 +17,7 @@ from ...logic import run_logic
 from ...lib import fusionAddInUtils as futil
 import threading
 import urllib.request
+from ..Login import entry as login
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -125,7 +126,14 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
 
 # This function will be called when the user hits the OK button in the command dialog
 def command_execute(args: adsk.core.CommandEventArgs):
-    futil.log(f'{CMD_NAME} Command Execute Event')
+    futil.log(f"entry.py::command_execute - {CMD_NAME} Command Execute Event")
+    
+    # Check if user is logged in before proceeding
+    if not login.get_login_status():
+        ui.messageBox("Please log in to use this feature.")
+        return
+        
+    # Rest of your existing command execution code...
     msg = f'Running that shit'
     ui.messageBox(msg)
 
