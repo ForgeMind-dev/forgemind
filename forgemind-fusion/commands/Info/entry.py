@@ -41,6 +41,10 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resource
 
 # Holds references to event handlers
 local_handlers = []
+# Holds reference to the timer
+timer = None
+# Flag to check if the timer is running
+is_timer_running = False
 
 
 def get_logic():
@@ -95,31 +99,36 @@ def get_logic():
     
     run_logic_result = run_logic(logic)
 
-    # # Send run_logic_result to /instruction_result
-    # result_payload = json.dumps(run_logic_result).encode("utf-8")
-    # result_req = urllib.request.Request(
-    #     "http://127.0.0.1:5000/instruction_result",
-    #     data=result_payload,
-    #     headers={"Content-Type": "application/json"},
-    #     method="POST",
-    # )
-    # try:
-    #     result_response = urllib.request.urlopen(result_req)
-    #     if result_response.getcode() != 200:
-    #         futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
-    # except Exception as e:
-    #     futil.log(f"entry.py::get_logic - Error in result request: {e}")
+    # Send run_logic_result to /instruction_result
+    result_payload = json.dumps(run_logic_result).encode("utf-8")
+    result_req = urllib.request.Request(
+        "http://127.0.0.1:5000/instruction_result",
+        data=result_payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    try:
+        result_response = urllib.request.urlopen(result_req)
+        if result_response.getcode() != 200:
+            futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
+    except Exception as e:
+        futil.log(f"entry.py::get_logic - Error in result request: {e}")
 
 
-# New function to run get_logic every 10 seconds.
+# Modified schedule_get_logic to check is_timer_running and use 10 seconds interval.
 def schedule_get_logic():
+    global timer, is_timer_running
+    if not is_timer_running:
+        return
     futil.log("entry.py::schedule_get_logic - Scheduling get_logic")
     get_logic()
-    threading.Timer(1, schedule_get_logic).start()
+    timer = threading.Timer(2, schedule_get_logic)
+    timer.start()
 
 
-# Executed when add-in is run.
+# Modified start to cancel any existing timer and schedule the new recurring call.
 def start():
+    global timer, is_timer_running
     # ******************************** Create Command Definition ********************************
     futil.log("entry.py::start - FORGEMIND ADD IN BEING RUN - start")
 
@@ -160,12 +169,32 @@ def start():
     # Now you can set various options on the control such as promoting it to always be shown.
     control.isPromoted = IS_PROMOTED
 
-    # Start the recurring get_logic calls every 10 seconds.
-    threading.Timer(0, schedule_get_logic).start()
+    # Cancel any existing timer before starting a new one
+    if timer:
+        futil.log("entry.py::start - Cancelling existing get_logic timer")
+        timer.cancel()
+        timer = None
+
+    # Start the recurring get_logic calls every 10 seconds if not already running.
+    if not is_timer_running:
+        is_timer_running = True
+        get_logic()  # run immediately
+        timer = threading.Timer(10, schedule_get_logic)
+        timer.start()
 
 
 # Executed when add-in is stopped.
 def stop():
+    global timer, is_timer_running
+    # Cancel the recurring get_logic calls
+    if timer:
+        futil.log("entry.py::stop - Cancelling get_logic timer")
+        timer.cancel()
+        timer = None
+        is_timer_running = False
+    else:
+        futil.log("entry.py::stop - No timer to cancel")
+
     # Get the various UI elements for this command
     workspace = ui.workspaces.itemById(WORKSPACE_ID)
     panel = workspace.toolbarPanels.itemById(PANEL_ID)
