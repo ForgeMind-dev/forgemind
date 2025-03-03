@@ -67,7 +67,7 @@ def get_logic():
 
     poll_data = poll_response.read().decode("utf-8")
     if not json.loads(poll_data).get("status"):
-        futil.log("entry.py::get_logic - No instructions found when polling")
+        # futil.log("entry.py::get_logic - No instructions found when polling")
         return None
     
     futil.log(f"entry.py::get_logic - Polling message: {json.loads(poll_data).get('message', '[NO MESSAGE]')}")
@@ -94,6 +94,21 @@ def get_logic():
     futil.log(f"entry.py::get_logic - get_instructions returned logic:\n\n[\n{logic}\n]")
     
     run_logic_result = run_logic(logic)
+
+    # # Send run_logic_result to /instruction_result
+    # result_payload = json.dumps(run_logic_result).encode("utf-8")
+    # result_req = urllib.request.Request(
+    #     "http://127.0.0.1:5000/instruction_result",
+    #     data=result_payload,
+    #     headers={"Content-Type": "application/json"},
+    #     method="POST",
+    # )
+    # try:
+    #     result_response = urllib.request.urlopen(result_req)
+    #     if result_response.getcode() != 200:
+    #         futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
+    # except Exception as e:
+    #     futil.log(f"entry.py::get_logic - Error in result request: {e}")
 
 
 # New function to run get_logic every 10 seconds.
