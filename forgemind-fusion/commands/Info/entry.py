@@ -120,7 +120,7 @@ def schedule_get_logic():
     global timer, is_timer_running
     if not is_timer_running:
         return
-    futil.log("entry.py::schedule_get_logic - Scheduling get_logic")
+    # futil.log("entry.py::schedule_get_logic - Scheduling get_logic")
     get_logic()
     timer = threading.Timer(2, schedule_get_logic)
     timer.start()

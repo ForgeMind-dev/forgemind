@@ -64,7 +64,13 @@ const App: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen }) => {
 
     try {
       // Send to backend API and get response
-      const aiResponse = await sendPrompt(input, "user123");
+      // Pass the current chat's threadId (if any) to the API call.
+      const aiResponse = await sendPrompt(input, "c2e9c803-41aa-4073-8b9d-f67b8cabfe9b", updatedChats[activeChatIndex].threadId);
+
+      // If the chat didn't already have a threadId, store the new one.
+      if (!updatedChats[activeChatIndex].threadId && aiResponse.thread_id) {
+        updatedChats[activeChatIndex].threadId = aiResponse.thread_id;
+      }
 
       // Create AI message
       const aiMessage: Message = {

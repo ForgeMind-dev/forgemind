@@ -9,6 +9,7 @@ export interface Message {
     name: string;
     messages: Message[];
     visible?: boolean; // if false, hide this chat in the UI
+    threadId?: string;
   }
   
   
