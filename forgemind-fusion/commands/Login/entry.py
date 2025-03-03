@@ -4,6 +4,7 @@ import os
 import json
 import traceback
 import threading
+import time
 from ... import config
 from ...lib import fusionAddInUtils as futil
 from ...lib import auth_config
@@ -309,10 +310,8 @@ def command_execute(args: adsk.core.CommandEventArgs):
                 clear_saved_session()
                 futil.log("Remember Me not checked - session will not persist")
             
-            # Start the Info command to begin polling
-            from ..Info import entry as info
-            info.start()
-            futil.log("Started Info command for polling")
+            # Start the Info command correctly
+            start_info_command()
         else:
             # If login fails, set appropriate error message
             login_error_message = "Invalid credentials. Please try again."
@@ -386,16 +385,16 @@ def command_destroy(args: adsk.core.CommandEventArgs):
             # Clean up all UI elements
             stop()
             
-            # Use sys.exit directly instead of adsk.terminate()
-            import sys
-            sys.exit(0)
+            # Don't exit the application - this causes problems
+            # import sys
+            # sys.exit(0)
         except SystemExit:
             # Catch SystemExit and re-raise it
             raise
         except:
             futil.log(f"Error during termination: {traceback.format_exc()}")
-            import sys
-            sys.exit(1)  # Exit with error code
+            # import sys
+            # sys.exit(1)  # Exit with error code
             
     elif not is_logged_in and not login_retry:
         # This covers cases where the dialog might be closed without explicit cancel
@@ -406,12 +405,36 @@ def command_destroy(args: adsk.core.CommandEventArgs):
             from ... import commands
             commands.stop()
             stop()
-            import sys
-            sys.exit(0)
+            # import sys
+            # sys.exit(0)
         except SystemExit:
             # Catch SystemExit and re-raise it
             raise
         except:
             futil.log(f"Error during termination: {traceback.format_exc()}")
-            import sys
-            sys.exit(1)  # Exit with error code 
+            # import sys
+            # sys.exit(1)  # Exit with error code 
+
+# Function to safely start the Info command after successful login
+def start_info_command():
+    try:
+        # Wait a brief moment to ensure Login command is fully completed
+        time.sleep(0.5)
+        
+        # Import the Info command and start it properly
+        from ..Info import entry as info
+        
+        # Clean up any existing Info command first
+        try:
+            info_cmd_def = ui.commandDefinitions.itemById(f'{config.COMPANY_NAME}_{config.ADDIN_NAME}_Info')
+            if info_cmd_def:
+                info_cmd_def.deleteMe()
+                futil.log("Cleaned up existing Info command before restart")
+        except:
+            pass
+            
+        # Now start the Info command
+        info.start()
+        futil.log("Started Info command for polling after successful login")
+    except Exception as e:
+        futil.log(f"Error starting Info command: {str(e)}") 

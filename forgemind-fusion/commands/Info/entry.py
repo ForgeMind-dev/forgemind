@@ -75,9 +75,9 @@ def start():
     # Now you can set various options on the control such as promoting it to always be shown.
     control.isPromoted = IS_PROMOTED
     
-    # Automatically execute the command to start polling
-    cmd_def.execute()
-    futil.log('Info command executed - polling should start')
+    # Comment out automatic execution to prevent premature polling
+    # cmd_def.execute()
+    # futil.log('Info command executed - polling should start')
 
 
 # Executed when add-in is stopped.
@@ -112,6 +112,12 @@ def command_created(args: adsk.core.CommandCreatedEventArgs):
     futil.log(f'{CMD_NAME} Command Created Event')
     
     global polling_active
+    
+    # First check if user is logged in before starting polling
+    if not login.is_logged_in:
+        futil.log("User not logged in - not starting polling")
+        return
+        
     polling_active = True
 
     def get_logic():
