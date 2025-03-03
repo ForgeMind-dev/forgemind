@@ -42,6 +42,9 @@ ICON_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'resource
 # Holds references to event handlers
 local_handlers = []
 
+# Global flag to control polling
+polling_active = False
+
 
 # Executed when add-in is run.
 def start():
@@ -71,6 +74,10 @@ def start():
 
     # Now you can set various options on the control such as promoting it to always be shown.
     control.isPromoted = IS_PROMOTED
+    
+    # Automatically execute the command to start polling
+    cmd_def.execute()
+    futil.log('Info command executed - polling should start')
 
 
 # Executed when add-in is stopped.
@@ -100,24 +107,35 @@ def stop():
 
 
 # Function to be called when a user clicks the corresponding button in the UI
-# Here you define the User Interface for your command and identify other command events to potentially handle
 def command_created(args: adsk.core.CommandCreatedEventArgs):
     # General logging for debug
     futil.log(f'{CMD_NAME} Command Created Event')
+    
+    global polling_active
+    polling_active = True
 
     def get_logic():
-        try:
-            response = urllib.request.urlopen('http://localhost:5000/poll')
-            if response.getcode() == 200:
-                logic = response.read().decode('utf-8')
-                futil.log('Running logic: ' + logic)
-                run_logic(logic)
-            else:
-                futil.log(f'example.com returned status code {response.getcode()}')
-        except urllib.error.URLError as e:
-            futil.log(f'Error polling example.com: {e}')
+        while polling_active:  # Use flag to control polling
+            try:
+                response = urllib.request.urlopen('http://localhost:3000/poll')
+                if response.getcode() == 200:
+                    logic = response.read().decode('utf-8')
+                    futil.log('Running logic: ' + logic)
+                    run_logic(logic)
+                else:
+                    futil.log(f'Poll request returned status code {response.getcode()}')
+            except urllib.error.URLError as e:
+                futil.log(f'Error polling localhost:3000: {e}')
+            except Exception as e:
+                futil.log(f'Unexpected error during polling: {str(e)}')
+            
+            # Wait before next poll
+            time.sleep(1)  # Poll every second
 
-    get_logic()
+    # Start polling in a separate thread
+    polling_thread = threading.Thread(target=get_logic, daemon=True)
+    polling_thread.start()
+    futil.log('Started polling thread')
 
     # Connect to the events that are needed by this command.
     futil.add_handler(args.command.execute, command_execute, local_handlers=local_handlers)
@@ -140,6 +158,11 @@ def command_execute(args: adsk.core.CommandEventArgs):
 
 # This function will be called when the user completes the command.
 def command_destroy(args: adsk.core.CommandEventArgs):
-    global local_handlers
+    global local_handlers, polling_active
     local_handlers = []
+    
+    # Stop the polling thread
+    polling_active = False
+    futil.log('Stopping polling thread')
+    
     futil.log(f'{CMD_NAME} Command Destroy Event')
