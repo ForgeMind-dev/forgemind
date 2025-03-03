@@ -110,6 +110,8 @@ def get_login_status():
         True if the user is logged in and authenticated
         False if the user is not logged in, canceled the login, or authentication failed
     """
+    global is_logged_in, login_canceled, login_retry
+    
     futil.log(f"Login status check: is_logged_in={is_logged_in}, canceled={login_canceled}, retry={login_retry}")
     
     # If login was canceled, always return False
