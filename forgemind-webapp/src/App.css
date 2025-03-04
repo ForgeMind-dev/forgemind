@@ -1,3 +1,19 @@
+/* Root element styles to ensure consistent background during loading */
+html, body, #root, .App {
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  background-color: #000000; /* Black background to match dashboard */
+  color: #ffffff;
+}
+
+.dashboard-page html, 
+.dashboard-page body, 
+.dashboard-page #root, 
+.dashboard-page .App {
+  background-color: #000000; /* Ensure dashboard always has black background */
+}
+
 .App {
   display: flex;
   flex-direction: column;

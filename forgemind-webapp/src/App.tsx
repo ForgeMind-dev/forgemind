@@ -16,7 +16,7 @@ function App() {
 
   // Effect to add/remove dashboard-page class based on current route
   useEffect(() => {
-    const isDashboard = location.pathname === '/dashboard';
+    const isDashboard = location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/');
     
     if (isDashboard) {
       document.documentElement.classList.add('dashboard-page');
@@ -40,6 +40,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/dashboard" element={<Dashboard onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen}/>} />
+          <Route path="/dashboard/:chatId" element={<Dashboard onToggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen}/>} />
         </Routes>
       </main>
       <Footer />

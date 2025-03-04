@@ -116,13 +116,12 @@
 }
 
 .user-email {
-  color: #a9c1f2;
-  font-size: 14px;
-  font-weight: 500;
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-  max-width: 120px; /* adjust as needed */
+  margin-right: 10px;
+  white-space: nowrap; 
+  overflow: visible;
+  text-overflow: initial;
+  max-width: none;
+  display: inline-block;
 }
 
 /* Login button */
@@ -165,4 +164,16 @@
   background-color: #ff5050;
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  margin-left: auto;
+}
+
+/* Add more space between logo and user section */
+.header-logo {
+  margin-right: auto;
 }
