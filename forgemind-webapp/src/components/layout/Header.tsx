@@ -14,25 +14,28 @@ interface HeaderProps {
 const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
   const [user, setUser] = useState<User | null>(null);
   const location = useLocation();
-  const isDashboardPage = location.pathname === '/dashboard';
+  // Update this to match all dashboard routes, including those with chat IDs
+  const isDashboardPage = location.pathname === '/dashboard' || location.pathname.startsWith('/dashboard/');
   
   useEffect(() => {
-    // Get current user when component mounts
-    const getCurrentUser = async () => {
+    const checkAuth = async () => {
       const { data } = await supabase.auth.getUser();
-      console.log('Current auth data:', data);
-      setUser(data.user);
+      // Only update state if we have data
+      if (data) {
+        setUser(data.user);
+      }
     };
     
-    getCurrentUser();
+    checkAuth();
     
-    // Set up auth state listener
+    // Listen for auth changes but don't log each event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      console.log('Auth state changed:', event, session);
-      setUser(session?.user || null);
+      // Only update for meaningful events, skip INITIAL_SESSION to avoid duplicate refreshes
+      if (event !== 'INITIAL_SESSION') {
+        setUser(session?.user || null);
+      }
     });
-    
-    // Clean up subscription
+
     return () => {
       subscription.unsubscribe();
     };
@@ -76,7 +79,10 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
               <div className="user-info">
                 <span className="user-email">{user.email}</span>
               </div>
-              <button className="logout-button" onClick={handleLogout}>
+              <button
+                className="logout-button"
+                onClick={handleLogout}
+              >
                 Logout
               </button>
             </div>

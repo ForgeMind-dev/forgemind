@@ -16,6 +16,17 @@
     <link rel="apple-touch-icon" href="./logo192.png" />
     <link rel="manifest" href="./manifest.json" />
     <title>ForgeMind</title>
+    <!-- Prevent white flash during page load with consistent dark background -->
+    <style>
+      html, body, #root {
+        margin: 0;
+        padding: 0;
+        background-color: #000000;
+        color: #ffffff;
+        min-height: 100vh;
+        width: 100%;
+      }
+    </style>
     <script defer src="static/js/main.2dc608a0.js"></script>
     <link href="static/css/main.c23bf699.css" rel="stylesheet" />
   </head>

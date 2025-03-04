@@ -10,6 +10,8 @@ const API_BASE_URL = process.env.REACT_APP_BACKEND_URL || 'http://localhost:5000
  * @param threadId (Optional) The thread ID to include in the request body.
  */
 export async function sendPrompt(text: string, userId: string, threadId?: string) {
+  // threadId is OpenAI's thread ID, which is stored in our database's thread_id column
+  // The API will return both thread_id (OpenAI) and chat_id (our database primary key)
   const body: any = { text, user_id: userId };
   if (threadId) {
     body.thread_id = threadId;
@@ -19,6 +21,8 @@ export async function sendPrompt(text: string, userId: string, threadId?: string
     headers: {
       'Content-Type': 'application/json'
     },
+    mode: 'cors',
+    credentials: 'omit',
     body: JSON.stringify(body)
   });
 
@@ -27,6 +31,98 @@ export async function sendPrompt(text: string, userId: string, threadId?: string
   }
   
   return response.json();
+}
+
+/**
+ * Retrieves all chats for a user.
+ * @param userId The user's ID (from Supabase Auth)
+ */
+export async function getUserChats(userId: string) {
+  const response = await fetch(`${API_BASE_URL}/get_chats?user_id=${encodeURIComponent(userId)}`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    mode: 'cors',
+    credentials: 'omit'
+  });
+
+  if (!response.ok) {
+    throw new Error(`Error retrieving chats: ${response.statusText}`);
+  }
+  
+  return response.json();
+}
+
+/**
+ * Deletes a chat and all its messages from the database.
+ * @param chatId The ID of the chat to delete
+ * @param userId The user's ID who owns the chat
+ */
+export async function deleteChat(chatId: string, userId: string) {
+  console.log(`Attempting to delete chat: ${chatId} for user: ${userId}`);
+  
+  try {
+    const response = await fetch(`${API_BASE_URL}/delete_chat`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      mode: 'cors',
+      credentials: 'omit',
+      body: JSON.stringify({
+        chat_id: chatId,
+        user_id: userId
+      })
+    });
+
+    console.log(`Delete response status: ${response.status}`);
+    
+    const data = await response.json();
+    console.log('Delete response data:', data);
+    
+    if (!response.ok) {
+      // If we got a response but with error status
+      const errorMessage = data.message || response.statusText;
+      throw new Error(`Error deleting chat: ${errorMessage}`);
+    }
+    
+    return data;
+  } catch (error) {
+    console.error('Error in deleteChat:', error);
+    throw error;
+  }
+}
+
+/**
+ * Retrieves messages for a specific chat.
+ * @param chatId The ID of the chat
+ */
+export async function getChatMessages(chatId: string) {
+  try {
+    console.log(`Fetching messages for chat: ${chatId}`);
+    const response = await fetch(`${API_BASE_URL}/get_messages?chat_id=${chatId}`, {
+      mode: 'cors',
+      credentials: 'omit'
+    });
+    
+    // If we get a 500 error, log it but don't throw an error
+    // Instead return an empty messages array
+    if (response.status === 500) {
+      console.warn(`Server error fetching messages for chat ${chatId}. The server might be experiencing issues.`);
+      return { messages: [] };
+    }
+    
+    if (!response.ok) {
+      throw new Error(`Error retrieving messages: ${response.statusText}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error(`Error in getChatMessages for ${chatId}:`, error);
+    // Return empty messages instead of throwing to prevent UI crashes
+    return { messages: [] };
+  }
 }
 
 /**

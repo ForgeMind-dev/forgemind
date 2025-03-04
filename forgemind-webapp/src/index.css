@@ -1,0 +1,24 @@
+/* Base styles to prevent white flash during page load */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  background-color: #000000;
+  color: #ffffff;
+  min-height: 100vh;
+  width: 100%;
+  transition: none !important;
+}
+
+/* This rule ensures the black background is always visible, even during page transitions */
+body {
+  background-color: #000000 !important;
+}
+
+/* Apply dashboard styles immediately to prevent flash */
+.dashboard-page html,
+.dashboard-page body,
+.dashboard-page #root {
+  background-color: #000000;
+}
+
+/* Rest of your existing CSS */ 
