@@ -1,6 +1,7 @@
 import adsk.core, adsk.fusion, traceback
 from adsk.core import Application, UserInterface
 from ..lib import fusionAddInUtils as futil
+from ..commands.Login import entry as login
 import math
 
 app = adsk.core.Application.get()
@@ -52,7 +53,11 @@ def get_workspace_state():
 
             description["components"].append(comp_info)
 
-        return {"cad_state": description, "user_id": 'c2e9c803-41aa-4073-8b9d-f67b8cabfe9b'}
+        # Get the authenticated user's ID
+        user_id = login.get_user_id()
+        
+        # Use the authenticated user's ID if available, otherwise use a default
+        return {"cad_state": description, "user_id": user_id or 'anonymous'}
     except Exception as error:
         futil.log('Error in get_workspace_state: ' + str(error))
         return None

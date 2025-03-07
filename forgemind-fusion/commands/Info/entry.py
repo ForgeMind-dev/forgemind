@@ -54,7 +54,7 @@ def get_logic():
 
     # Call /poll first with workspace description
     poll_req = urllib.request.Request(
-        "http://127.0.0.1:5000/poll",
+        f"{config.API_BASE_URL}/poll",
         data=json_payload,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -77,7 +77,7 @@ def get_logic():
     futil.log(f"entry.py::get_logic - Polling message: {json.loads(poll_data).get('message', '[NO MESSAGE]')}")
     # Call /get_instructions
     req = urllib.request.Request(
-        "http://127.0.0.1:5000/get_instructions",
+        f"{config.API_BASE_URL}/get_instructions",
         data=json_payload,
         headers={"Content-Type": "application/json"},
         method="POST",
@@ -102,7 +102,7 @@ def get_logic():
     # Send run_logic_result to /instruction_result
     result_payload = json.dumps(run_logic_result).encode("utf-8")
     result_req = urllib.request.Request(
-        "http://127.0.0.1:5000/instruction_result",
+        f"{config.API_BASE_URL}/instruction_result",
         data=result_payload,
         headers={"Content-Type": "application/json"},
         method="POST",
