@@ -9,3 +9,36 @@
 **/.env.test.local
 **/.env.production.local
 **/*.rdb
+
+# Python specific
+**/__pycache__/
+**/*.py[cod]
+**/*$py.class
+**/*.so
+**/.Python
+**/env/
+**/build/
+**/develop-eggs/
+**/downloads/
+**/eggs/
+**/.eggs/
+**/lib64/
+**/parts/
+**/sdist/
+**/var/
+**/*.egg-info/
+**/.installed.cfg
+**/*.egg
+**/MANIFEST
+
+# Backup files
+**/*.bak
+**/*~
+**/*.swp
+**/.*.swp
+
+# IDE specific
+**/.idea/
+**/.vscode/
+**/*.sublime-workspace
+**/*.sublime-project

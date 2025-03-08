@@ -1,0 +1,145 @@
+.plugin-status-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  flex-shrink: 0; /* Prevent shrinking */
+  height: 22px; /* Match auth container height */
+  margin-left: 50px; /* Additional spacing from menu button */
+}
+
+.plugin-status-indicator {
+  display: flex;
+  align-items: center;
+  background-color: rgba(73, 198, 120, 0.15); /* Default to active style for better visibility */
+  border-radius: 100px;
+  padding: 4px 10px;
+  height: 28px;
+  font-size: 12px;
+  white-space: nowrap;
+  min-width: 115px; /* Ensure consistent width */
+  justify-content: center; /* Center the content */
+}
+
+.plugin-status-indicator .status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 6px;
+  flex-shrink: 0; /* Prevent dot from shrinking */
+}
+
+.plugin-status-indicator.active {
+  background-color: rgba(73, 198, 120, 0.15);
+}
+
+.plugin-status-indicator.inactive {
+  background-color: rgba(255, 191, 79, 0.15);
+}
+
+.plugin-status-indicator.disconnected {
+  background-color: rgba(240, 95, 95, 0.15);
+}
+
+.plugin-status-indicator.active .status-dot {
+  background-color: #49c678; /* green */
+  box-shadow: 0 0 6px rgba(73, 198, 120, 0.5);
+}
+
+.plugin-status-indicator.inactive .status-dot {
+  background-color: #ffbf4f; /* amber/orange */
+  box-shadow: 0 0 6px rgba(255, 191, 79, 0.5);
+}
+
+.plugin-status-indicator.disconnected .status-dot {
+  background-color: #f05f5f; /* red */
+  box-shadow: 0 0 6px rgba(240, 95, 95, 0.5);
+}
+
+.plugin-status-indicator.active .status-text {
+  color: #49c678;
+}
+
+.plugin-status-indicator.inactive .status-text {
+  color: #ffbf4f;
+}
+
+.plugin-status-indicator.disconnected .status-text {
+  color: #f05f5f;
+}
+
+.plugin-last-seen {
+  position: absolute;
+  bottom: -20px;
+  white-space: nowrap;
+  font-size: 11px;
+  color: #999;
+  z-index: 10; /* Ensure it's above other elements */
+  left: 0; /* Align with left edge now that it's on the left side */
+}
+
+/* Styles for the refresh button */
+.plugin-refresh-button {
+  position: absolute;
+  top: 60%;
+  right: -28px; /* Position it to the right of the status indicator */
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 5px;
+  color: #888;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.plugin-refresh-button:hover {
+  color: #555;
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.plugin-refresh-button:active {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.plugin-refresh-button.refreshing svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Media query for smaller screens */
+@media (max-width: 768px) {
+  .plugin-status-indicator {
+    padding: 4px 6px;
+    font-size: 11px;
+  }
+  
+  .plugin-status-indicator .status-dot {
+    margin-right: 4px;
+  }
+  
+  .plugin-last-seen {
+    font-size: 10px;
+  }
+  
+  .plugin-refresh-button {
+    right: -24px;
+    padding: 3px;
+  }
+  
+  .plugin-refresh-button svg {
+    width: 16px;
+    height: 16px;
+  }
+} 

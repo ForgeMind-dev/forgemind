@@ -42,9 +42,21 @@
 .left-section {
   display: flex;
   align-items: center;
-  min-width: 30px;
+  min-width: 160px; /* Ensure enough space for menu button + plugin status */
   border: none;
   z-index: 2;
+  flex: 0 0 auto; /* Don't grow or shrink */
+  gap: 20px; /* Increase space between menu button and plugin status */
+  position: relative; /* Ensure proper positioning context */
+  height: 100%;
+}
+
+/* Plugin status wrapper - to position it in the left section */
+.plugin-status-wrapper {
+  display: flex;
+  align-items: center;
+  height: 100%;
+  padding-left: 8px; /* Add padding to create space from menu button */
 }
 
 /* Home page logo container */
@@ -80,6 +92,7 @@
   display: flex;
   align-items: center;
   z-index: 1;
+  pointer-events: auto; /* Enable clicks */
 }
 
 /* Logo image styling */
@@ -97,6 +110,10 @@
   margin-left: auto;
   z-index: 2; /* Ensure auth section is above centered logo */
   height: 100%;
+  position: relative; /* For plugin status last seen popup positioning */
+  flex: 0 0 auto; /* Don't grow or shrink */
+  max-width: 300px; /* Set a reasonable max-width */
+  overflow: hidden; /* Prevent overflow */
 }
 
 /* Container for logged-in user info and logout button */
@@ -107,6 +124,7 @@
   border-radius: 100px;
   padding: 4px 8px 4px 16px;
   height: 28px; /* Consistent height */
+  white-space: nowrap;
 }
 
 .user-info {
@@ -118,9 +136,9 @@
 .user-email {
   margin-right: 10px;
   white-space: nowrap; 
-  overflow: visible;
-  text-overflow: initial;
-  max-width: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px; /* Allow more room for email */
   display: inline-block;
 }
 
@@ -158,6 +176,7 @@
   border: none;
   cursor: pointer;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  white-space: nowrap;
 }
 
 .logout-button:hover {
@@ -176,4 +195,60 @@
 /* Add more space between logo and user section */
 .header-logo {
   margin-right: auto;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 900px) {
+  .auth-section {
+    max-width: 200px;
+  }
+  
+  .user-email {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .logo-section {
+    width: 140px; /* Constrain width to ensure visibility */
+  }
+  
+  .auth-section {
+    max-width: 150px;
+  }
+  
+  .user-email {
+    max-width: 100px;
+  }
+}
+
+@media (max-width: 576px) {
+  .auth-section {
+    max-width: 110px;
+  }
+  
+  .logout-button {
+    padding: 4px 10px;
+    font-size: 12px;
+  }
+  
+  .login-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo-image {
+    height: 30px; /* Slightly smaller logo */
+  }
+  
+  .auth-container {
+    padding: 4px 6px;
+  }
+  
+  .logout-button {
+    padding: 3px 8px;
+    font-size: 12px;
+  }
 }

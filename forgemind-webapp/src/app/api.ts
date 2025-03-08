@@ -162,3 +162,52 @@ export async function pollOperation() {
   
   return response.json();
 }
+
+/**
+ * Checks if the user's Fusion plugin is logged in and active.
+ * @param userId The user's ID
+ * @returns Object with plugin login status information
+ */
+export async function checkPluginLoginStatus(userId: string) {
+  try {
+    const response = await fetch(`${API_BASE_URL}/check_plugin_login?user_id=${encodeURIComponent(userId)}`, {
+      mode: 'cors',
+      credentials: 'omit'
+    });
+    
+    if (!response.ok) {
+      console.warn(`Error checking plugin login status: ${response.statusText}`);
+      return { 
+        status: false, 
+        plugin_login: false, 
+        is_active: false,
+        is_connected: false,
+        is_logged_out: false,
+        error: response.statusText
+      };
+    }
+    
+    const result = await response.json();
+    
+    // Log status to help with debugging
+    console.log(`Plugin status for ${userId}:`, {
+      plugin_login: result.plugin_login,
+      is_active: result.is_active,
+      is_connected: result.is_connected,
+      is_logged_out: result.is_logged_out,
+      status_message: result.status_message
+    });
+    
+    return result;
+  } catch (error) {
+    console.error('Error checking plugin login status:', error);
+    return { 
+      status: false, 
+      plugin_login: false, 
+      is_active: false,
+      is_connected: false,
+      is_logged_out: false,
+      error: error instanceof Error ? error.message : String(error)
+    };
+  }
+}
