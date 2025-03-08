@@ -803,7 +803,7 @@ def check_plugin_login():
         # that the user_id is valid and belongs to a real user
         try:
             # Use a lightweight query that just checks if the user exists
-            user_check = supabase.from_("profiles").select("id").eq("id", user_id).limit(1).execute()
+            user_check = supabase.from_("users").select("id").eq("id", user_id).limit(1).execute()
             user_exists = user_check.data and len(user_check.data) > 0
             if not user_exists:
                 print(f"WARNING: User {user_id} not found in database")
