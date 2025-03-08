@@ -151,18 +151,8 @@ def authenticate(email, password):
         }
         json_payload = json.dumps(auth_data).encode("utf-8")
         
-        # Log the URL being used (without showing credentials)
-        futil.log(f"Attempting to authenticate user {email} with backend at URL: {config.API_BASE_URL}")
-        
-        # Create SSL context for secure connections
-        ssl_context = ssl.create_default_context()
-        
-        # For development environments, disable SSL verification if needed
-        if config.DISABLE_SSL_VERIFICATION:
-            futil.log("WARNING: SSL verification disabled - use only in development")
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-        
+        # Make the authentication request to the backend
+        futil.log(f"Attempting to authenticate user {email} with backend")
         auth_req = urllib.request.Request(
             f"{config.API_BASE_URL}/fusion_auth",
             data=json_payload,
@@ -205,68 +195,37 @@ def authenticate(email, password):
                 # Clear the logged out flag since we're successfully logged in now
                 was_logged_out = False
                 
-                # Log success details
-                futil.log(f"Authentication successful for user ID: {user_id}")
+                futil.log(f"Successfully authenticated as user {user_id}")
                 
-                # Encrypted storage for auth data
-                try:
-                    save_auth_data(auth_token, user_id)
-                    futil.log("Authentication data stored securely")
-                except Exception as store_error:
-                    futil.log(f"Warning: Failed to store authentication data: {str(store_error)}")
+                # Save authentication data securely
+                save_auth_data(auth_token, user_id)
                 
-                # Success!
                 return True, "Authentication successful"
-                
-            except json.JSONDecodeError as json_error:
-                futil.log(f"Error parsing authentication response JSON: {str(json_error)}")
+            except json.JSONDecodeError as e:
+                futil.log(f"Failed to parse authentication response: {e}")
                 futil.log(f"Raw response: {response_data}")
-                return False, "Invalid response format from server"
+                return False, f"Failed to parse server response: {str(e)}"
                 
-        except urllib.error.HTTPError as http_error:
-            error_msg = f"HTTP Error during authentication: {http_error.code}"
-            detailed_error = f"Server error response: {http_error.reason}"
-            
-            # Additional error info for debugging
-            futil.log(f"Authentication HTTP error: {error_msg}")
-            futil.log(f"Error reason: {http_error.reason}")
-            futil.log(f"Error headers: {http_error.headers}")
-            
-            if http_error.code == 403:
-                futil.log("Forbidden - the server is rejecting the request. Check if the backend is properly configured.")
-                detailed_error = "\n\nForbidden - the server is rejecting the request. Check if the backend is properly configured."
-            
-            # Try to read error response body if available
+        except urllib.error.HTTPError as e:
+            error_message = f"HTTP Error during authentication: {e.code}"
             try:
-                error_body = http_error.read().decode("utf-8")
-                futil.log(f"Error response body: {error_body}")
-                if error_body:
-                    try:
-                        error_json = json.loads(error_body)
-                        if error_json.get("message"):
-                            detailed_error += f"\n\nServer message: {error_json.get('message')}"
-                    except:
-                        detailed_error += f"\n\nServer response: {error_body}"
+                error_data = e.read().decode('utf-8')
+                futil.log(f"Server error response: {error_data}")
+                error_json = json.loads(error_data)
+                if error_json.get("message"):
+                    error_message = error_json.get("message")
             except:
                 pass
-                
-            return False, f"{error_msg}\n{detailed_error}"
             
-        except urllib.error.URLError as url_error:
-            error_msg = f"URL Error during authentication: {str(url_error.reason)}"
-            futil.log(error_msg)
-            futil.log(f"Using API URL: {config.API_BASE_URL}")
-            return False, f"{error_msg}\n\nPlease check your internet connection and backend URL configuration."
-            
-        except Exception as e:
-            error_msg = f"Unexpected error during authentication: {str(e)}"
-            futil.log(error_msg)
-            return False, error_msg
+            futil.log(f"Authentication HTTP error: {error_message}")
+            return False, f"Authentication error: {error_message}"
+        except urllib.error.URLError as e:
+            futil.log(f"URL Error during authentication: {e.reason}")
+            return False, f"Connection error: {e.reason}"
     
     except Exception as e:
-        error_trace = traceback.format_exc()
-        futil.log(f"Unexpected error during authentication: {str(e)}\nTraceback: {error_trace}")
-        return False, f"Authentication failed: {str(e)}"
+        futil.log(f"Authentication error: {str(e)}")
+        return False, f"Authentication error: {str(e)}"
 
 def save_auth_data(token, uid):
     """Save authentication data securely."""

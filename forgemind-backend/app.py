@@ -1077,29 +1077,5 @@ def check_plugin_login():
         print(f"Error checking plugin login status: {str(e)}")
         return jsonify({"status": False, "message": f"Error checking plugin status: {str(e)}"}), 500
 
-@app.route("/health", methods=["GET", "OPTIONS"])
-def health_check():
-    """Simple health check endpoint to verify server and Redis status"""
-    try:
-        # Try to ping Redis
-        redis_status = False
-        try:
-            redis_status = redis_client.ping()
-        except Exception as e:
-            print(f"Redis health check failed: {str(e)}")
-            
-        return jsonify({
-            "status": "ok",
-            "redis_connected": redis_status,
-            "timestamp": int(time.time()),
-            "environment": os.environ.get("ENVIRONMENT", "production")
-        })
-    except Exception as e:
-        return jsonify({
-            "status": "error",
-            "message": str(e),
-            "timestamp": int(time.time())
-        }), 500
-
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
