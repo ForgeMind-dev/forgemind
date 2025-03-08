@@ -764,9 +764,9 @@ def run_logic(logic: str, chat_id=None) -> dict:
                     'errors': execution_errors
                 }
             else:
-        return {
-            **get_workspace_state(),
-            'status': 'success',
+                return {
+                    **get_workspace_state(),
+                    'status': 'success',
                     'message': f'Successfully executed {executed_blocks} code blocks'
                 }
         else:
@@ -782,7 +782,7 @@ def run_logic(logic: str, chat_id=None) -> dict:
                     **get_workspace_state(),
                     'status': 'warning',
                     'message': 'No operations were performed'
-        }
+                }
     except Exception as error:
         futil.log('Error: ' + str(error))
         return {

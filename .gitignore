@@ -9,6 +9,7 @@
 **/.env.test.local
 **/.env.production.local
 **/*.rdb
+forgemind-fusion/auth
 
 # Python specific
 **/__pycache__/
