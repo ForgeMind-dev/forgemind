@@ -697,50 +697,13 @@ def fusion_auth():
 def verify_token():
     """Verify a Supabase authentication token or encrypted token data."""
     try:
-        # Get request information for debugging
-        print(f"Verify token request received from IP: {request.remote_addr}")
-        print(f"Request headers: {dict(request.headers)}")
-        
         data = request.get_json()
         
         if not data:
-            error_msg = "No JSON data provided"
-            print(f"Verify token error: {error_msg}")
-            return jsonify({"status": False, "message": error_msg}), 400
+            return jsonify({"status": False, "message": "No JSON data provided"}), 400
             
         token = data.get("token")
         encrypted_data = data.get("encrypted_data")
-        
-        # Print token state for debugging (mask most of it)
-        if token and len(token) > 10:
-            token_preview = token[:5] + "..." + token[-5:]
-            print(f"Token verification request with token: {token_preview}")
-        elif token:
-            print(f"Token verification request with very short token (possible error)")
-        else:
-            print(f"Token verification request with no token provided")
-            
-        # Special override for the Fusion plugin test - accept the test user without further validation
-        # if they're using our user credentials from ForgeMind
-        # This is a temporary fix to ensure authentication works even if Supabase tables are not set up
-        if token and "beratforgemind" in token:
-            print("Special test token detected - bypassing verification for demonstration")
-            return jsonify({
-                "status": True,
-                "message": "Token verified via special test bypass",
-                "user_id": "5fa93893-924b-4654-b8ed-260c26bfd976",
-                "token": token
-            })
-        
-        # Special override for our specific user email we're testing with
-        if token and "5fa93893-924b-4654-b8ed-260c26bfd976" in token:
-            print("Test user token detected - bypassing verification for demonstration")
-            return jsonify({
-                "status": True,
-                "message": "Token verified via user ID match",
-                "user_id": "5fa93893-924b-4654-b8ed-260c26bfd976",
-                "token": token
-            })
         
         # Handle encrypted data verification (used by Fusion add-in)
         if token == "VERIFY_NEEDED" and encrypted_data:
@@ -756,8 +719,7 @@ def verify_token():
                     decoded = base64.b64decode(encrypted_data)
                     if not decoded or len(decoded) < 32:  # Arbitrary minimum size
                         return jsonify({"status": False, "message": "Invalid encrypted data"}), 401
-                except Exception as decode_error:
-                    print(f"Base64 decode error: {str(decode_error)}")
+                except Exception:
                     return jsonify({"status": False, "message": "Invalid base64 data"}), 401
                 
                 # For demo purposes, we'll extract a user ID from the session of the request
@@ -798,8 +760,7 @@ def verify_token():
                         except Exception as users_error:
                             print(f"Users table error: {str(users_error)}")
                     
-                    # Special fallback - use our test user ID directly
-                    # This is our known user ID from earlier curl test
+                    # Last resort fallback
                     if not test_user_id:
                         test_user_id = "5fa93893-924b-4654-b8ed-260c26bfd976"
                         print(f"No users found, using hardcoded test user ID: {test_user_id[:8]}...")
@@ -808,7 +769,7 @@ def verify_token():
                     print(f"Warning: Error retrieving user data: {str(auth_error)}")
                     test_user_id = "5fa93893-924b-4654-b8ed-260c26bfd976"
                 
-                # Return a successful response with the test user ID
+                # Return a successful response with a temporary token and user ID
                 return jsonify({
                     "status": True,
                     "message": "Token verified via encrypted data",
@@ -823,65 +784,20 @@ def verify_token():
                 
         # Handle standard token verification (direct token provided)
         if not token or token.startswith("TEMPORARY_TOKEN_"):
-            print(f"Invalid token format: {token if not token else 'TEMPORARY_TOKEN_*'}")
             return jsonify({"status": False, "message": "Valid token is required"}), 400
         
         # Verify the token with Supabase
         try:
-            print(f"Verifying token with Supabase auth API")
             user = supabase.auth.get_user(token)
             if user and user.user and user.user.id:
-                print(f"Token verified successfully for user: {user.user.id[:8]}...")
                 return jsonify({
                     "status": True,
                     "message": "Token is valid",
                     "user_id": user.user.id
                 })
             else:
-                print(f"Token verification failed: Invalid or expired token")
                 return jsonify({"status": False, "message": "Invalid token"}), 401
         except Exception as e:
-            print(f"Token validation error: {str(e)}")
-            
-            # IMPORTANT: If we have a JWT that looks valid but can't be verified with Supabase,
-            # try to extract the user ID from it and validate that way
-            if token and len(token) > 20 and "." in token:
-                try:
-                    import base64
-                    # JWT tokens have 3 parts separated by dots
-                    parts = token.split('.')
-                    if len(parts) >= 2:
-                        # Decode the payload (middle part)
-                        payload = parts[1]
-                        # Add padding if needed
-                        payload += '=' * ((4 - len(payload) % 4) % 4)
-                        decoded = base64.b64decode(payload)
-                        payload_data = json.loads(decoded)
-                        
-                        # Extract subject (user ID) from payload
-                        if 'sub' in payload_data:
-                            user_id = payload_data['sub']
-                            print(f"Extracted user ID from JWT: {user_id[:8]}...")
-                            
-                            # Additional validation can be performed here if needed
-                            # For this demo, we'll assume it's valid if we can extract a user ID
-                            return jsonify({
-                                "status": True,
-                                "message": "Token verified via JWT payload",
-                                "user_id": user_id
-                            })
-                except Exception as jwt_error:
-                    print(f"Error extracting data from JWT: {str(jwt_error)}")
-            
-            # Last resort - use our test user
-            if "berat@forgemind.dev" in str(e) or "5fa93893-924b-4654-b8ed-260c26bfd976" in str(e):
-                print("Emergency bypass: Detected our test user in error message")
-                return jsonify({
-                    "status": True,
-                    "message": "Token verified via error bypass (DEMO ONLY)",
-                    "user_id": "5fa93893-924b-4654-b8ed-260c26bfd976"
-                })
-                
             return jsonify({"status": False, "message": f"Token validation error: {str(e)}"}), 401
     
     except Exception as e:
