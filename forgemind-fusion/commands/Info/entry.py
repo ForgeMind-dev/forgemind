@@ -13,7 +13,7 @@ import time
 import adsk.core, adsk.fusion, adsk.cam
 import os
 from ... import config
-from ...logic import run_logic, get_workspace_state
+from ...logic import run_logic, get_workspace_state, set_active_chat, debug_log
 from ...lib import fusionAddInUtils as futil
 import threading
 import json
@@ -48,8 +48,18 @@ is_timer_running = False
 
 
 def get_logic():
+    # Check authentication first - don't poll if not authenticated
+    from ...commands.Login import entry as login
+    if not login.is_user_authenticated():
+        futil.log("entry.py::get_logic - User not authenticated, skipping poll")
+        return
+    
     # Get workspace description
     workspace_desc = get_workspace_state()
+    
+    # Add user_id to the request
+    workspace_desc["user_id"] = login.get_user_id()
+    
     json_payload = json.dumps(workspace_desc).encode("utf-8")
 
     # Call /poll first with workspace description
@@ -61,8 +71,28 @@ def get_logic():
     )
     try:
         poll_response = urllib.request.urlopen(poll_req)
-    except Exception as e:
+    except urllib.error.HTTPError as e:
+        # Check if this is an authentication error from server
+        if e.code == 401:
+            try:
+                error_data = json.loads(e.read().decode("utf-8"))
+                if error_data.get("authentication_required"):
+                    futil.log("entry.py::get_logic - Server indicates authentication required, stopping polling")
+                    # If server says we need to authenticate, tell the user and stop polling
+                    ui.messageBox("You need to log in again to use ForgeMind.", "Authentication Required", 0, 1)
+                    # Reset local authentication state
+                    login.was_logged_out = True
+                    login.is_authenticated = False
+                    # Stop polling
+                    stop_polling()
+                    return
+            except:
+                pass
+                
         futil.log(f"entry.py::get_logic - Error in poll request: {e}")
+        return
+    except Exception as e:
+        futil.log(f"entry.py::get_logic - General error in poll request: {e}")
         return
 
     if poll_response.getcode() != 200:
@@ -70,11 +100,14 @@ def get_logic():
         return None
 
     poll_data = poll_response.read().decode("utf-8")
-    if not json.loads(poll_data).get("status"):
+    poll_json = json.loads(poll_data)
+    
+    if not poll_json.get("status"):
         # futil.log("entry.py::get_logic - No instructions found when polling")
         return None
     
-    futil.log(f"entry.py::get_logic - Polling message: {json.loads(poll_data).get('message', '[NO MESSAGE]')}")
+    futil.log(f"entry.py::get_logic - Polling message: {poll_json.get('message', '[NO MESSAGE]')}")
+    
     # Call /get_instructions
     req = urllib.request.Request(
         f"{config.API_BASE_URL}/get_instructions",
@@ -83,7 +116,26 @@ def get_logic():
         method="POST",
     )
 
-    response = urllib.request.urlopen(req)
+    try:
+        response = urllib.request.urlopen(req)
+    except urllib.error.HTTPError as e:
+        # Check if this is an authentication error
+        if e.code == 401:
+            try:
+                error_data = json.loads(e.read().decode("utf-8"))
+                if error_data.get("authentication_required"):
+                    futil.log("entry.py::get_logic - Server indicates authentication required, stopping polling")
+                    # If server says we need to authenticate, stop polling
+                    stop_polling()
+                    return
+            except:
+                pass
+        futil.log(f"entry.py::get_logic - Error in get_instructions request: {e}")
+        return
+    except Exception as e:
+        futil.log(f"entry.py::get_logic - General error in get_instructions request: {e}")
+        return
+        
     if response.getcode() != 200:
         futil.log(f"entry.py::get_logic - Backend returned status code {response.getcode()}")
         return
@@ -91,46 +143,111 @@ def get_logic():
     response_data = response.read().decode("utf-8")
     json_data = json.loads(response_data)
     logic = json_data.get("instructions", None)
+    chat_id = json_data.get("chat_id", None)  # Extract chat_id from response
+    operation_id = json_data.get("operation_id", None)  # Extract operation_id for tracking
+    
     if not logic:
         futil.log(f"entry.py::get_logic - get_instructions returned no logic {response.getcode()}")
         return
 
-    futil.log(f"entry.py::get_logic - get_instructions returned logic:\n\n[\n{logic}\n]")
+    futil.log(f"entry.py::get_logic - get_instructions returned logic for chat {chat_id}:\n\n[\n{logic}\n]")
     
-    run_logic_result = run_logic(logic)
-
-    # Send run_logic_result to /instruction_result
-    result_payload = json.dumps(run_logic_result).encode("utf-8")
-    result_req = urllib.request.Request(
-        f"{config.API_BASE_URL}/instruction_result",
-        data=result_payload,
-        headers={"Content-Type": "application/json"},
-        method="POST",
-    )
     try:
-        result_response = urllib.request.urlopen(result_req)
-        if result_response.getcode() != 200:
-            futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
+        # Pass chat_id to run_logic to maintain chat context
+        debug_log(f"Executing operation for chat_id={chat_id}, operation_id={operation_id}")
+        run_logic_result = run_logic(logic, chat_id)
+        
+        # Add user_id to result payload
+        run_logic_result["user_id"] = login.get_user_id()
+        run_logic_result["operation_id"] = operation_id  # Include operation_id in the result
+
+        # Send run_logic_result to /instruction_result
+        result_payload = json.dumps(run_logic_result).encode("utf-8")
+        result_req = urllib.request.Request(
+            f"{config.API_BASE_URL}/instruction_result",
+            data=result_payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            result_response = urllib.request.urlopen(result_req)
+            if result_response.getcode() != 200:
+                futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
+        except Exception as e:
+            futil.log(f"entry.py::get_logic - Error in result request: {e}")
     except Exception as e:
-        futil.log(f"entry.py::get_logic - Error in result request: {e}")
+        futil.log(f"entry.py::get_logic - Error executing logic: {e}")
+        # Send error result
+        error_result = {
+            "user_id": login.get_user_id(),
+            "operation_id": operation_id,
+            "status": "error",
+            "message": str(e)
+        }
+        error_payload = json.dumps(error_result).encode("utf-8")
+        error_req = urllib.request.Request(
+            f"{config.API_BASE_URL}/instruction_result",
+            data=error_payload,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        try:
+            error_response = urllib.request.urlopen(error_req)
+        except:
+            pass
 
 
-# Modified schedule_get_logic to check is_timer_running and use 10 seconds interval.
+# Modified schedule_get_logic to check authentication before executing
 def schedule_get_logic():
     global timer, is_timer_running
     if not is_timer_running:
         return
+        
+    # Check if user is authenticated before polling
+    from ...commands.Login import entry as login
+    if not login.is_user_authenticated():
+        futil.log("entry.py::schedule_get_logic - User not authenticated, stopping polling")
+        stop_polling()
+        return
+        
     # futil.log("entry.py::schedule_get_logic - Scheduling get_logic")
     get_logic()
     timer = threading.Timer(2, schedule_get_logic)
     timer.start()
 
 
-# Modified start to cancel any existing timer and schedule the new recurring call.
+# Add a function to stop polling
+def stop_polling():
+    global timer, is_timer_running
+    if timer:
+        futil.log("entry.py::stop_polling - Cancelling get_logic timer")
+        timer.cancel()
+        timer = None
+    is_timer_running = False
+
+
+# Modified start to only start polling if user is authenticated
 def start():
     global timer, is_timer_running
     # ******************************** Create Command Definition ********************************
     futil.log("entry.py::start - FORGEMIND ADD IN BEING RUN - start")
+    
+    # Check if user is authenticated before starting polling
+    from ...commands.Login import entry as login
+    is_auth = login.is_user_authenticated()
+    user_id = login.get_user_id()
+    futil.log(f"entry.py::start - User authenticated: {is_auth}, User ID: {user_id or 'None'}")
+    
+    # Double-check authentication - make sure we have both authenticated flag AND user ID
+    if not is_auth or not user_id:
+        futil.log(f"entry.py::start - Authentication check failed: is_auth={is_auth}, user_id={user_id or 'None'}")
+        # If either check fails, consider user not authenticated
+        is_auth = False
+        # Reset timer to ensure no polling occurs
+        if timer:
+            timer.cancel()
+            timer = None
+        is_timer_running = False
 
     # Prevent duplicate command definition error
     existing_cmd = ui.commandDefinitions.itemById(CMD_ID)
@@ -169,18 +286,53 @@ def start():
     # Now you can set various options on the control such as promoting it to always be shown.
     control.isPromoted = IS_PROMOTED
 
-    # Cancel any existing timer before starting a new one
+    # Cancel any existing timer before potentially starting a new one
     if timer:
         futil.log("entry.py::start - Cancelling existing get_logic timer")
         timer.cancel()
         timer = None
+        is_timer_running = False
 
-    # Start the recurring get_logic calls every 2 seconds if not already running.
-    if not is_timer_running:
-        is_timer_running = True
-        get_logic()  # run immediately
-        timer = threading.Timer(2, schedule_get_logic)
-        timer.start()
+    # Only start the timer if the user is authenticated
+    if is_auth:
+        # Verify authentication with backend before starting polling
+        try:
+            # Create a simple verification request to test if we can actually connect
+            workspace_desc = {"user_id": user_id, "test_auth": True}
+            json_payload = json.dumps(workspace_desc).encode("utf-8")
+            
+            test_req = urllib.request.Request(
+                f"{config.API_BASE_URL}/poll",
+                data=json_payload,
+                headers={"Content-Type": "application/json"},
+                method="POST",
+            )
+            
+            try:
+                test_response = urllib.request.urlopen(test_req)
+                # If we got a 200 response, authentication is working
+                if test_response.getcode() == 200:
+                    futil.log("entry.py::start - Authentication verified with backend, starting polling")
+                    # Now it's safe to start polling
+                    start_polling()
+                else:
+                    futil.log(f"entry.py::start - Backend verification failed with status {test_response.getcode()}")
+            except urllib.error.HTTPError as e:
+                if e.code == 401:
+                    # Authentication issue - inform user and don't start polling
+                    futil.log("entry.py::start - Backend rejected authentication, showing login prompt")
+                    login.was_logged_out = True  # Force re-login
+                    login.is_authenticated = False
+                    ui.messageBox("Please login again to use ForgeMind.", "Authentication Required")
+                else:
+                    futil.log(f"entry.py::start - HTTP error while verifying auth: {e.code}")
+            except Exception as e:
+                futil.log(f"entry.py::start - Error verifying authentication: {str(e)}")
+        except Exception as e:
+            futil.log(f"entry.py::start - Failed to verify authentication: {str(e)}")
+    else:
+        futil.log("entry.py::start - Not starting polling because user is not authenticated")
+        is_timer_running = False
 
 
 # Executed when add-in is stopped.
@@ -245,3 +397,19 @@ def command_destroy(args: adsk.core.CommandEventArgs):
     global local_handlers
     local_handlers = []
     futil.log(f"entry.py::command_destroy - {CMD_NAME} Command Destroy Event")
+
+
+# New helper function to start polling
+def start_polling():
+    global timer, is_timer_running
+    if is_timer_running and timer:
+        # Already polling, don't start again
+        futil.log("entry.py::start_polling - Already polling, not starting again")
+        return
+        
+    futil.log("entry.py::start_polling - Starting polling")
+    is_timer_running = True
+    get_logic()  # run immediately
+    timer = threading.Timer(2, schedule_get_logic)
+    timer.start()
+    futil.log("entry.py::start_polling - Polling started successfully")

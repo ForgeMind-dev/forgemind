@@ -24,6 +24,7 @@ local_handlers = []
 is_authenticated = False
 auth_token = None
 user_id = None
+was_logged_out = False  # Flag to prevent immediate re-authentication after logout
 
 # Command properties
 CMD_NAME = os.path.basename(os.path.dirname(__file__))
@@ -133,7 +134,7 @@ def decrypt_data(encrypted_str):
 
 def authenticate(email, password):
     """Authenticate with the backend server using email and password."""
-    global is_authenticated, auth_token, user_id
+    global is_authenticated, auth_token, user_id, was_logged_out
     
     try:
         # Prepare the authentication payload
@@ -144,6 +145,7 @@ def authenticate(email, password):
         json_payload = json.dumps(auth_data).encode("utf-8")
         
         # Make the authentication request to the backend
+        futil.log(f"Attempting to authenticate user {email} with backend")
         auth_req = urllib.request.Request(
             f"{config.API_BASE_URL}/fusion_auth",
             data=json_payload,
@@ -151,28 +153,64 @@ def authenticate(email, password):
             method="POST",
         )
         
-        auth_response = urllib.request.urlopen(auth_req)
-        
-        if auth_response.getcode() != 200:
-            futil.log(f"Authentication failed with status code: {auth_response.getcode()}")
-            return False, "Authentication failed. Please check your credentials."
-        
-        # Parse the response
-        response_data = auth_response.read().decode("utf-8")
-        json_data = json.loads(response_data)
-        
-        if not json_data.get("status"):
-            return False, json_data.get("message", "Authentication failed")
-        
-        # Store authentication data
-        is_authenticated = True
-        auth_token = json_data.get("token")
-        user_id = json_data.get("user_id")
-        
-        # Save authentication data securely
-        save_auth_data(auth_token, user_id)
-        
-        return True, "Authentication successful"
+        try:
+            auth_response = urllib.request.urlopen(auth_req)
+            
+            if auth_response.getcode() != 200:
+                futil.log(f"Authentication failed with status code: {auth_response.getcode()}")
+                return False, "Authentication failed. Please check your credentials."
+                
+            # Parse the response
+            response_data = auth_response.read().decode("utf-8")
+            futil.log(f"Authentication response received, status code: {auth_response.getcode()}")
+            
+            try:
+                json_data = json.loads(response_data)
+                
+                if not json_data.get("status"):
+                    error_msg = json_data.get("message", "Authentication failed")
+                    futil.log(f"Authentication failed with message: {error_msg}")
+                    return False, error_msg
+                
+                # Store authentication data
+                is_authenticated = True
+                auth_token = json_data.get("token")
+                user_id = json_data.get("user_id")
+                
+                if not auth_token or not user_id:
+                    futil.log("Authentication missing token or user_id in response")
+                    return False, "Invalid authentication response from server"
+                
+                # Clear the logged out flag since we're successfully logged in now
+                was_logged_out = False
+                
+                futil.log(f"Successfully authenticated as user {user_id}")
+                
+                # Save authentication data securely
+                save_auth_data(auth_token, user_id)
+                
+                return True, "Authentication successful"
+            except json.JSONDecodeError as e:
+                futil.log(f"Failed to parse authentication response: {e}")
+                futil.log(f"Raw response: {response_data}")
+                return False, f"Failed to parse server response: {str(e)}"
+                
+        except urllib.error.HTTPError as e:
+            error_message = f"HTTP Error during authentication: {e.code}"
+            try:
+                error_data = e.read().decode('utf-8')
+                futil.log(f"Server error response: {error_data}")
+                error_json = json.loads(error_data)
+                if error_json.get("message"):
+                    error_message = error_json.get("message")
+            except:
+                pass
+            
+            futil.log(f"Authentication HTTP error: {error_message}")
+            return False, f"Authentication error: {error_message}"
+        except urllib.error.URLError as e:
+            futil.log(f"URL Error during authentication: {e.reason}")
+            return False, f"Connection error: {e.reason}"
     
     except Exception as e:
         futil.log(f"Authentication error: {str(e)}")
@@ -226,7 +264,13 @@ def save_auth_data(token, uid):
 
 def load_auth_data():
     """Load authentication data securely."""
-    global is_authenticated, auth_token, user_id
+    global is_authenticated, auth_token, user_id, was_logged_out
+    
+    # If we've explicitly logged out in this session, don't try to re-authenticate
+    # until the user explicitly logs in again
+    if was_logged_out:
+        futil.log("Not loading auth data because user explicitly logged out")
+        return False
     
     try:
         # Check if the auth file exists
@@ -342,26 +386,67 @@ def load_auth_data():
 
 def logout():
     """Log out the user by clearing the authentication data."""
-    global is_authenticated, auth_token, user_id
+    global is_authenticated, auth_token, user_id, was_logged_out
     
     try:
-        # Clear the global variables
+        # Store user_id for logging and backend notification
+        uid_to_clear = user_id
+        
+        # First invalidate local authentication state
         is_authenticated = False
         auth_token = None
         user_id = None
+        was_logged_out = True  # Set flag to prevent immediate re-authentication
         
-        # Delete the auth file
+        futil.log("Starting logout process...")
+        
+        # Notify backend that plugin has logged out
+        if uid_to_clear:
+            try:
+                futil.log(f"Notifying backend of logout for user {uid_to_clear}")
+                logout_req = urllib.request.Request(
+                    f"{config.API_BASE_URL}/plugin_logout",
+                    data=json.dumps({"user_id": uid_to_clear}).encode("utf-8"),
+                    headers={"Content-Type": "application/json"},
+                    method="POST",
+                )
+                logout_response = urllib.request.urlopen(logout_req)
+                response_data = logout_response.read().decode('utf-8')
+                futil.log(f"Logout notification sent to backend: {response_data}")
+            except Exception as e:
+                futil.log(f"Error notifying backend about logout: {str(e)}")
+                # Continue with local logout even if backend notification fails
+        
+        # Delete the auth files
         auth_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "auth")
         auth_file = os.path.join(auth_dir, "auth.secure")
         legacy_file = os.path.join(auth_dir, "auth.json")
         
+        files_removed = 0
+        
         # Remove both auth files if they exist
         if os.path.exists(auth_file):
-            os.remove(auth_file)
+            try:
+                os.remove(auth_file)
+                files_removed += 1
+                futil.log(f"Removed auth file: {auth_file}")
+            except Exception as e:
+                futil.log(f"Error removing auth file {auth_file}: {str(e)}")
+                return False
+                
         if os.path.exists(legacy_file):
-            os.remove(legacy_file)
+            try:
+                os.remove(legacy_file)
+                files_removed += 1
+                futil.log(f"Removed legacy auth file: {legacy_file}")
+            except Exception as e:
+                futil.log(f"Error removing legacy auth file {legacy_file}: {str(e)}")
+                return False
         
-        futil.log("Logged out successfully")
+        if files_removed == 0:
+            futil.log("Warning: No auth files found to remove")
+        
+        futil.log(f"Logged out user {uid_to_clear} successfully")
         return True
     except Exception as e:
         futil.log(f"Error during logout: {str(e)}")
@@ -369,11 +454,6 @@ def logout():
 
 def start():
     """Start the Login command."""
-    # Check if already authenticated
-    if load_auth_data():
-        futil.log("User is already authenticated")
-        return
-    
     # Create command definition
     cmd_def = ui.commandDefinitions.itemById(CMD_ID)
     if not cmd_def:
@@ -384,7 +464,29 @@ def start():
     # Add command created handler
     futil.add_handler(cmd_def.commandCreated, command_created)
     
-    # Execute the command to show the login dialog
+    # Check if already authenticated
+    if load_auth_data():
+        # User is already authenticated, show a dialog with logout option
+        # Use OK/Cancel instead of Yes/No since the Yes/No constants don't seem to work properly
+        result = ui.messageBox(
+            "You are already authenticated with ForgeMind.\n\nWould you like to sign out?",
+            "ForgeMind Authentication",
+            1,  # OK/Cancel buttons (0 = OK, 1 = OK/Cancel)
+            2   # Question mark icon
+        )
+        
+        # For OK/Cancel dialog: 0 = OK clicked, 1 = Cancel clicked
+        if result == 0:  # OK was clicked (equivalent to "Yes")
+            # User wants to logout
+            if logout():
+                ui.messageBox("You have been signed out successfully.")
+                # Execute the command to show the login dialog again
+                cmd_def.execute()
+            else:
+                ui.messageBox("Error during logout. Please try again.", "Logout Failed", 0, 1)  # OK button with warning icon
+        return
+    
+    # If not authenticated, execute the command to show the login dialog
     cmd_def.execute()
 
 def stop():
@@ -399,59 +501,89 @@ def stop():
     local_handlers = []
 
 def command_created(args: adsk.core.CommandCreatedEventArgs):
-    """Handle the command created event."""
-    futil.log(f"{CMD_NAME} Command Created Event")
+    """This function is called when the user clicks the command in the Fusion 360 UI."""
+    global is_authenticated, was_logged_out, local_handlers
+    
+    futil.log("Login Command Created Event")
     
     # Get the command
     cmd = args.command
     
-    # Connect to the command events
-    futil.add_handler(cmd.execute, command_execute, local_handlers=local_handlers)
-    futil.add_handler(cmd.destroy, command_destroy, local_handlers=local_handlers)
-    
-    # Create the command inputs
+    # Get the CommandInputs collection to create new command inputs.
     inputs = cmd.commandInputs
     
-    # Add a text box for the email
-    email_input = inputs.addStringValueInput('email', 'Email', '')
+    # Create a group input.
+    group_input = inputs.addGroupCommandInput("login_group", "Login")
+    group_child_inputs = group_input.children
     
-    # Add a text box for the password (secured)
-    password_input = inputs.addStringValueInput('password', 'Password', '')
+    # Email input
+    email_input = group_child_inputs.addStringValueInput("email", "Email", "")
+    
+    # Password input
+    password_input = group_child_inputs.addStringValueInput("password", "Password", "")
     password_input.isPassword = True
     
-    # Add a message for errors
-    message_text = inputs.addTextBoxCommandInput('message', '', '', 2, True)
-    message_text.isFullWidth = True
+    # Text message for status/error - initially empty
+    message_input = group_child_inputs.addTextBoxCommandInput("message", "Status", "", 2, True)
+    message_input.text = ""
+    
+    # Check if already authenticated
+    if is_authenticated:
+        email_input.isEnabled = False
+        password_input.isEnabled = False
+        message_input.text = "You are already logged in."
+    elif was_logged_out:
+        # In this case the user explicitly logged out, so we want to make sure
+        # they confirm re-authentication
+        message_input.text = "You have logged out. Please log in again."
+    
+    # Connect to the command events
+    futil.add_handler(
+        args.command.execute, command_execute, local_handlers=local_handlers
+    )
+    futil.add_handler(
+        args.command.destroy, command_destroy, local_handlers=local_handlers
+    )
 
 def command_execute(args: adsk.core.CommandEventArgs):
-    """Handle the command execute event."""
-    futil.log(f"{CMD_NAME} Command Execute Event")
+    """This event is fired when the user enters all the values required by your command and clicks OK."""
+    global is_authenticated, auth_token, user_id, was_logged_out
     
-    # Get the inputs
+    futil.log(f"Login Command Execute Event")
+    
+    # Get the command inputs.
     inputs = args.command.commandInputs
+    email_input = inputs.itemById("email")
+    password_input = inputs.itemById("password")
     
-    email_input = inputs.itemById('email')
-    password_input = inputs.itemById('password')
-    message_input = inputs.itemById('message')
+    # Get the input values.
+    email = email_input.value
+    password = password_input.value
     
     # Validate inputs
-    if not email_input.value or not password_input.value:
-        message_input.text = "Email and password are required"
-        args.executeFailed = True
-        args.executeFailedMessage = "Email and password are required"
+    if not email or not password:
+        ui.messageBox("Please enter both email and password.", "Login Error")
         return
     
-    # Authenticate with the backend
-    success, message = authenticate(email_input.value, password_input.value)
+    # Attempt to authenticate with the backend
+    success, message = authenticate(email, password)
     
-    if not success:
-        message_input.text = message
-        args.executeFailed = True
-        args.executeFailedMessage = message
-        return
-    
-    # Authentication successful
-    ui.messageBox("Login successful! You can now use ForgeMind.")
+    if success:
+        # Reset was_logged_out flag since we've explicitly logged in now
+        was_logged_out = False
+        ui.messageBox(f"Successfully authenticated as {email}.", "Login Successful")
+        
+        # Import the Info/entry module to start polling after login
+        from ..Info import entry as info_entry
+        
+        # Give a short delay for UI to update before starting polling
+        def delayed_start_polling():
+            futil.log("Delayed start polling after login...")
+            info_entry.start_polling()
+            
+        threading.Timer(0.5, delayed_start_polling).start()
+    else:
+        ui.messageBox(f"Login failed: {message}", "Login Error")
 
 def command_destroy(args: adsk.core.CommandEventArgs):
     """Handle the command destroy event."""

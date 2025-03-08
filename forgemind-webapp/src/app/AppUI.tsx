@@ -3,7 +3,7 @@ import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import BottomBar from "./components/BottomBar";
 import ConfirmationModal from "./components/ConfirmationModal";
-import { sendPrompt, getUserChats, getChatMessages, deleteChat } from "./api";
+import { sendPrompt, getUserChats, getChatMessages, deleteChat, checkPluginLoginStatus } from "./api";
 import Header from "../components/layout/Header";
 import { supabase } from "../supabaseClient";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -306,6 +306,37 @@ const AppUI: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen, initialChatId
       // Check if userId is available before proceeding
       if (!userId) {
         throw new Error("User not authenticated. Please sign in.");
+      }
+
+      // Check if the plugin is connected before sending the prompt
+      const pluginStatus = await checkPluginLoginStatus(userId);
+      console.log("Plugin status before sending prompt:", pluginStatus);
+      
+      // If plugin is not connected, show an error message instead of sending the prompt
+      if (!pluginStatus.is_connected || pluginStatus.is_logged_out) {
+        // First update the state to show the user's message
+        setInput("");
+        
+        // Create a copy of the current chats
+        const updatedChats = [...chats];
+        
+        // Get the index of the active chat
+        const chatIndex = newChatIndex;
+        
+        // Since we already added the user message above, don't add it again
+        // Just add the error message about plugin status
+        const errorMessage: Message = {
+          role: "assistant" as const,
+          content: "⚠️ Plugin is offline or disconnected. Please connect your Fusion 360 plugin and log in to use this feature."
+        };
+        
+        // Add error message
+        updatedChats[chatIndex].messages.push(errorMessage);
+        
+        // Update state
+        setChats([...updatedChats]);
+        
+        return;
       }
 
       // First, send the prompt and get the initial response

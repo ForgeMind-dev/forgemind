@@ -181,17 +181,32 @@ export async function checkPluginLoginStatus(userId: string) {
         status: false, 
         plugin_login: false, 
         is_active: false,
+        is_connected: false,
+        is_logged_out: false,
         error: response.statusText
       };
     }
     
-    return response.json();
+    const result = await response.json();
+    
+    // Log status to help with debugging
+    console.log(`Plugin status for ${userId}:`, {
+      plugin_login: result.plugin_login,
+      is_active: result.is_active,
+      is_connected: result.is_connected,
+      is_logged_out: result.is_logged_out,
+      status_message: result.status_message
+    });
+    
+    return result;
   } catch (error) {
     console.error('Error checking plugin login status:', error);
     return { 
       status: false, 
       plugin_login: false, 
       is_active: false,
+      is_connected: false,
+      is_logged_out: false,
       error: error instanceof Error ? error.message : String(error)
     };
   }

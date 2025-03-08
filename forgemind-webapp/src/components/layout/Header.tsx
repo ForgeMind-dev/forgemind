@@ -71,11 +71,17 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
         const result = await checkPluginLoginStatus(user.id);
         
         if (result.status) {
+          // Take is_logged_out into account - if explicitly logged out, override isLoggedIn
+          const isPluginLoggedIn = result.is_connected || false;
+          const isPluginLoggedOut = result.is_logged_out || false;
+          
           setPluginStatus({
-            isLoggedIn: result.plugin_login,
+            isLoggedIn: isPluginLoggedIn && !isPluginLoggedOut, // Ensure logged out status is respected
             isActive: result.is_active,
             lastSeen: result.last_seen_timestamp
           });
+          
+          console.log(`Plugin status updated: Connected=${isPluginLoggedIn}, LoggedOut=${isPluginLoggedOut}, Active=${result.is_active}`);
         }
       } catch (error) {
         console.error('Error checking plugin status:', error);
@@ -85,12 +91,37 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
     // Initial check
     checkStatus();
     
-    // Set up polling interval (every 30 seconds)
-    const intervalId = setInterval(checkStatus, 30000);
+    // Set up polling interval (every 2 minutes = 120000ms)
+    const intervalId = setInterval(checkStatus, 120000);
     
     // Clean up interval on unmount
     return () => clearInterval(intervalId);
   }, [user, isDashboardPage]);
+
+  // Function to manually refresh plugin status
+  const handleRefreshPluginStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const result = await checkPluginLoginStatus(user.id);
+      
+      if (result.status) {
+        // Take is_logged_out into account - if explicitly logged out, override isLoggedIn
+        const isPluginLoggedIn = result.is_connected || false;
+        const isPluginLoggedOut = result.is_logged_out || false;
+        
+        setPluginStatus({
+          isLoggedIn: isPluginLoggedIn && !isPluginLoggedOut, // Ensure logged out status is respected
+          isActive: result.is_active,
+          lastSeen: result.last_seen_timestamp
+        });
+        
+        console.log(`Plugin status manually refreshed: Connected=${isPluginLoggedIn}, LoggedOut=${isPluginLoggedOut}, Active=${result.is_active}`);
+      }
+    } catch (error) {
+      console.error('Error refreshing plugin status:', error);
+    }
+  };
   
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -143,6 +174,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
                     isLoggedIn={pluginStatus.isLoggedIn}
                     isActive={pluginStatus.isActive}
                     lastSeen={pluginStatus.lastSeen}
+                    onRefresh={handleRefreshPluginStatus}
                   />
                 </div>
               )}

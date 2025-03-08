@@ -233,6 +233,9 @@ def chat():
             "status": "pending",
         }
     ).execute()
+    
+    # Log operation creation for security auditing
+    print(f"Created new operation for user {data.user_id} with chat_id {chat_id}")
 
     return jsonify({"status": "success", "response": assistant_response, "thread_id": thread_id, "chat_id": chat_id})
 
@@ -246,31 +249,64 @@ def instruction_result():
     status = data.get("status")
 
     if not user_id:
-        print("Missing 0")
+        print("Missing user_id")
         return jsonify({"status": False, "message": "Missing user_id"}), 400
     if not cad_state:
-        print("Missing 1")
+        print("Missing cad_state")
         return jsonify({"status": False, "message": "Missing cad_state"}), 400
     if not message and status != "success":
-        print("Missing 2")
+        print("Missing message")
         return jsonify({"status": False, "message": "Missing message"}), 400
     if not status:
-        print("Missing 3")
+        print("Missing status")
         return jsonify({"status": False, "message": "Missing status"}), 400
+    
+    # Log operation completion by user (for security auditing)
+    print(f"Operation completed by user {user_id} with status: {status}")
 
-    # Store the result in Redis
+    # If status is not "success", mark it as "error" in database
+    final_status = "completed" if status == "success" else "error"
+    
+    # Update the most recent sent operation for this user to completed/error
     try:
-        redis_client.set(
-            f"cad_state:{user_id}",
-            json.dumps(cad_state) if isinstance(cad_state, dict) else cad_state,
+        sent_ops = (
+            supabase.table("operations")
+            .select("*")
+            .eq("status", "sent")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
         )
-        redis_client.set(f"message:{user_id}", message or "")
-        redis_client.set(f"status:{user_id}", status)
+        
+        if sent_ops.data and len(sent_ops.data) > 0:
+            op = sent_ops.data[0]
+            
+            # Update operation status
+            supabase.table("operations").update({
+                "status": final_status,
+                "result": message
+            }).eq("id", op["id"]).execute()
+            
+            print(f"Updated operation {op['id']} for user {user_id} to status: {final_status}")
+        else:
+            print(f"No sent operation found for user {user_id} to update")
+    except Exception as e:
+        print(f"Error updating operation status: {e}")
+
+    # Store in Redis
+    try:
+        if "cad_state" in data:
+            redis_client.set(f"cad_state:{user_id}", json.dumps(cad_state))
+        if "message" in data:
+            redis_client.set(f"cad_message:{user_id}", message)
+        if "status" in data:
+            redis_client.set(f"cad_status:{user_id}", status)
     except Exception as e:
         print(f"Warning: Error storing data in Redis: {e}")
         # Continue execution even if Redis fails
 
-    return jsonify({"status": True, "message": "Result stored"})
+    return jsonify({"status": True, "message": "Result received successfully"})
 
 
 @app.route("/poll", methods=["POST"])
@@ -282,10 +318,49 @@ def poll():
     if not user_id:
         return jsonify({"status": False, "message": "Missing user_id"}), 400
     
+    # Diagnostic logging for all Redis keys/values for this user
+    try:
+        plugin_login = redis_client.get(f"plugin_login:{user_id}")
+        plugin_login_value = plugin_login.decode("utf-8") if plugin_login else "none"
+        
+        explicit_logout = redis_client.get(f"plugin_explicitly_logged_out:{user_id}")
+        explicit_logout_value = explicit_logout.decode("utf-8") if explicit_logout else "none"
+        
+        last_seen = redis_client.get(f"plugin_last_seen:{user_id}")
+        last_seen_value = last_seen.decode("utf-8") if last_seen else "none"
+        
+        print(f"REDIS STATE for user {user_id}:")
+        print(f"  plugin_login: {plugin_login_value}")
+        print(f"  explicitly_logged_out: {explicit_logout_value}")
+        print(f"  last_seen: {last_seen_value}")
+    except Exception as e:
+        print(f"Warning: Error retrieving Redis diagnostic data: {e}")
+    
+    # Check if user has explicitly logged out
+    try:
+        explicit_logout = redis_client.get(f"plugin_explicitly_logged_out:{user_id}")
+        if explicit_logout and explicit_logout.decode("utf-8") == "true":
+            print(f"Rejecting poll for user {user_id} - user has explicitly logged out")
+            
+            # Return 401 with a clear message that authentication is required
+            return jsonify({
+                "status": False, 
+                "message": "User has logged out. Authentication required.",
+                "authentication_required": True,
+                "explicit_logout": True
+            }), 401
+    except Exception as e:
+        print(f"Warning: Error checking logout status in Redis: {e}")
+        # Continue execution even if Redis check fails
+    
     # Update plugin last seen timestamp in Redis
     try:
         redis_client.set(f"plugin_last_seen:{user_id}", str(int(time.time())))
-        redis_client.set(f"plugin_login:{user_id}", "true")
+        
+        # Only set login to true if not explicitly logged out
+        logout_flag = redis_client.get(f"plugin_explicitly_logged_out:{user_id}")
+        if not logout_flag or logout_flag.decode("utf-8") != "true":
+            redis_client.set(f"plugin_login:{user_id}", "true")
     except Exception as e:
         print(f"Warning: Error updating plugin status in Redis: {e}")
         # Continue execution even if Redis fails
@@ -301,46 +376,75 @@ def poll():
             print(f"Warning: Error storing data in Redis: {e}")
             # Continue execution even if Redis fails
 
-    # Retrieve one pending operation
+    # Check for pending operations
     pending_ops = (
         supabase.table("operations")
         .select("*")
         .eq("status", "pending")
+        .eq("user_id", user_id)
         .limit(1)
         .execute()
     )
-    if not pending_ops.data:
-        return jsonify({"status": False, "message": "No pending operation found"})
 
-    return jsonify({"status": True, "message": "Operation pending"})
+    if pending_ops.data and len(pending_ops.data) > 0:
+        print(f"Pending operation found for user {user_id}")
+        return jsonify({"status": True, "message": "Operation pending for this user"})
+
+    return jsonify({"status": False, "message": "No pending operation"})
 
 
 @app.route("/get_instructions", methods=["POST"])
 def get_instructions():
-    # Retrieve one pending operation
+    # Get user_id from request data
+    data = request.get_json()
+    if not data or not data.get("user_id"):
+        return jsonify({"status": False, "message": "Missing user_id parameter"}), 400
+        
+    user_id = data.get("user_id")
+    
+    # Check if user has explicitly logged out
+    try:
+        explicit_logout = redis_client.get(f"plugin_explicitly_logged_out:{user_id}")
+        if explicit_logout and explicit_logout.decode("utf-8") == "true":
+            print(f"Rejecting get_instructions for user {user_id} - user has explicitly logged out")
+            return jsonify({
+                "status": False, 
+                "message": "User has logged out. Authentication required.",
+                "authentication_required": True
+            }), 401
+    except Exception as e:
+        print(f"Warning: Error checking logout status in Redis: {e}")
+        # Continue execution even if Redis check fails
+    
+    # Retrieve one pending operation FOR THIS USER ONLY
     pending_ops = (
         supabase.table("operations")
         .select("*")
         .eq("status", "pending")
+        .eq("user_id", user_id)  # Critical security filter: only get operations for this user
         .limit(1)
         .execute()
     )
-    if not pending_ops.data:
-        return jsonify({"status": False, "message": "No pending operation found"})
 
-    operation = pending_ops.data[0]
+    if not pending_ops.data or len(pending_ops.data) == 0:
+        print(f"No pending operation for user {user_id}")
+        return jsonify({"status": False, "message": "No pending operation for this user"})
 
-    # Update its status to "sent"
-    supabase.table("operations").update({"status": "sent"}).eq(
-        "id", operation["id"]
-    ).execute()
-
-    # Return the instructions from the operation
-    instructions = operation["instructions"]
-    pattern = r"```(?:python)?\s*([\s\S]*?)\s*```"
-    match = re.search(pattern, instructions)
-    cleaned_instructions = match.group(1) if match else instructions.strip()
-    return jsonify({"status": True, "instructions": cleaned_instructions})
+    # Security double-check: make sure the operation belongs to this user
+    op = pending_ops.data[0]
+    if op["user_id"] != user_id:
+        print(f"SECURITY ALERT: User {user_id} tried to access operation belonging to {op['user_id']}")
+        return jsonify({"status": False, "message": "Access denied: operation belongs to another user"}), 403
+    
+    # Update the operation's status to "sent"
+    supabase.table("operations").update({"status": "sent"}).eq("id", op["id"]).execute()
+    
+    return jsonify({
+        "status": True,
+        "instructions": op["instructions"],
+        "operation_id": op["id"],
+        "chat_id": op["chat_id"]
+    })
 
 
 @app.route("/get_chats", methods=["GET", "OPTIONS"])
@@ -495,48 +599,53 @@ def delete_chat():
 
 @app.route("/fusion_auth", methods=["POST"])
 def fusion_auth():
-    """Authenticate Fusion 360 add-in users with Supabase."""
+    """Authenticate Fusion 360 plugin user with email and password"""
     try:
+        # Get data from request
         data = request.get_json()
-        
-        if not data:
-            return jsonify({"status": False, "message": "No JSON data provided"}), 400
-            
         email = data.get("email")
         password = data.get("password")
         
         if not email or not password:
-            return jsonify({"status": False, "message": "Email and password are required"}), 400
+            return jsonify({"status": False, "message": "Missing email or password"}), 400
         
-        # Authenticate with Supabase
+        # Call Supabase auth.sign_in method
         auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
         
-        # Extract the user ID and session token
+        # We need both user and session objects from the response
+        if not auth_response.user or not auth_response.session:
+            return jsonify({"status": False, "message": "Invalid email or password"}), 401
+        
+        # Get user and session from result
         user = auth_response.user
         session = auth_response.session
         
-        if not user or not session:
-            return jsonify({"status": False, "message": "Authentication failed"}), 401
-        
-        # Store login status in Redis
+        # Store plugin status in Redis
         try:
-            # Store plugin login status with timestamp
+            # Set plugin login status to true
             redis_client.set(f"plugin_login:{user.id}", "true")
+            # Set last seen timestamp
             redis_client.set(f"plugin_last_seen:{user.id}", str(int(time.time())))
+            
+            # IMPORTANT: Reset the explicit logout flag when user logs in again
+            # This ensures consistency between plugin and backend auth state
+            redis_client.set(f"plugin_explicitly_logged_out:{user.id}", "false")
+            
+            print(f"User {user.id} authenticated successfully - reset logout flags in Redis")
         except Exception as e:
-            print(f"Warning: Error storing plugin login status in Redis: {e}")
-            # Continue even if Redis fails
+            print(f"Warning: Error storing plugin status in Redis: {e}")
+            # Continue execution even if Redis fails
         
-        # Return the success response with user ID and token
+        # Return success with token from session and user id
         return jsonify({
-            "status": True,
-            "message": "Authentication successful",
-            "user_id": user.id,
-            "token": session.access_token
+            "status": True, 
+            "message": "Authentication successful", 
+            "token": session.access_token,  # Use access_token from session object
+            "user_id": user.id
         })
     
     except Exception as e:
-        print(f"Error in fusion_auth: {str(e)}")
+        print(f"Error in authentication: {str(e)}")
         return jsonify({"status": False, "message": f"Authentication error: {str(e)}"}), 500
 
 @app.route("/verify_token", methods=["POST"])
@@ -614,6 +723,47 @@ def verify_token():
         print(f"Error in verify_token: {str(e)}")
         return jsonify({"status": False, "message": f"Verification error: {str(e)}"}), 500
 
+@app.route("/plugin_logout", methods=["POST"])
+def plugin_logout():
+    """Handle plugin logout and update Redis status."""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({"status": False, "message": "No JSON data provided"}), 400
+            
+        user_id = data.get("user_id")
+        
+        if not user_id:
+            return jsonify({"status": False, "message": "Missing user_id"}), 400
+        
+        # Clear plugin login status in Redis - with additional keys to ensure full invalidation
+        try:
+            # Explicitly set the plugin status to logged out
+            redis_client.set(f"plugin_login:{user_id}", "false")
+            
+            # Update the last seen timestamp to now
+            redis_client.set(f"plugin_last_seen:{user_id}", str(int(time.time())))
+            
+            # Set a dedicated logout flag
+            redis_client.set(f"plugin_explicitly_logged_out:{user_id}", "true")
+            
+            # Log this event for debugging
+            print(f"Plugin logout recorded for user {user_id} with timestamp {int(time.time())}")
+        except Exception as e:
+            print(f"Warning: Error updating plugin logout status in Redis: {e}")
+            # Continue execution even if Redis fails
+        
+        return jsonify({
+            "status": True,
+            "message": "Plugin logout successful",
+            "user_id": user_id
+        })
+    
+    except Exception as e:
+        print(f"Error in plugin_logout: {str(e)}")
+        return jsonify({"status": False, "message": f"Logout error: {str(e)}"}), 500
+
 @app.route("/check_plugin_login", methods=["GET"])
 def check_plugin_login():
     """Check if a user's Fusion plugin is logged in and active."""
@@ -622,10 +772,50 @@ def check_plugin_login():
     if not user_id:
         return jsonify({"status": False, "message": "Missing user_id parameter"}), 400
     
+    # Diagnostic logging for all Redis keys/values for this user
+    try:
+        plugin_login = redis_client.get(f"plugin_login:{user_id}")
+        plugin_login_value = plugin_login.decode("utf-8") if plugin_login else "none"
+        
+        explicit_logout = redis_client.get(f"plugin_explicitly_logged_out:{user_id}")
+        explicit_logout_value = explicit_logout.decode("utf-8") if explicit_logout else "none"
+        
+        last_seen = redis_client.get(f"plugin_last_seen:{user_id}")
+        last_seen_value = last_seen.decode("utf-8") if last_seen else "none"
+        
+        print(f"REDIS STATE for user {user_id}:")
+        print(f"  plugin_login: {plugin_login_value}")
+        print(f"  explicitly_logged_out: {explicit_logout_value}")
+        print(f"  last_seen: {last_seen_value}")
+    except Exception as e:
+        print(f"Warning: Error retrieving Redis diagnostic data: {e}")
+    
     try:
         # Check if plugin is logged in
         plugin_login = redis_client.get(f"plugin_login:{user_id}")
         plugin_login_status = plugin_login and plugin_login.decode("utf-8") == "true"
+        
+        # Check explicit logout flag
+        explicit_logout = redis_client.get(f"plugin_explicitly_logged_out:{user_id}")
+        explicitly_logged_out = explicit_logout and explicit_logout.decode("utf-8") == "true"
+        
+        # Check Supabase for user existence - this provides an extra layer of validation
+        # that the user_id is valid and belongs to a real user
+        try:
+            # Use a lightweight query that just checks if the user exists
+            user_check = supabase.from_("profiles").select("id").eq("id", user_id).limit(1).execute()
+            user_exists = user_check.data and len(user_check.data) > 0
+            if not user_exists:
+                print(f"WARNING: User {user_id} not found in database")
+                # Consider the user logged out if they don't exist in the database
+                explicitly_logged_out = True
+                plugin_login_status = False
+        except Exception as e:
+            print(f"Warning: Error checking user existence in database: {e}")
+        
+        # If explicitly logged out, override login status regardless of other states
+        if explicitly_logged_out:
+            plugin_login_status = False
         
         # Get last seen timestamp
         last_seen = redis_client.get(f"plugin_last_seen:{user_id}")
@@ -641,13 +831,49 @@ def check_plugin_login():
             # Consider active if seen in the last 5 minutes
             is_active = time_since_last_seen < 300  # 5 minutes in seconds
         
+        # Check if plugin has explicitly logged out via plugin_login key
+        plugin_explicitly_logged_out = plugin_login and plugin_login.decode("utf-8") == "false"
+        
+        # Combined logout check - either by flag or by login status
+        is_logged_out = explicitly_logged_out or plugin_explicitly_logged_out
+        
+        # Only show as connected if the plugin is BOTH logged in AND active AND NOT explicitly logged out
+        is_connected = plugin_login_status and is_active and not is_logged_out
+        
+        # Debug info to help diagnose issues
+        print(f"Plugin status for user {user_id}:")
+        print(f"  plugin_login: {plugin_login.decode('utf-8') if plugin_login else None}")
+        print(f"  plugin_login_status: {plugin_login_status}")
+        print(f"  explicitly_logged_out: {explicitly_logged_out}")
+        print(f"  plugin_explicitly_logged_out: {plugin_explicitly_logged_out}")
+        print(f"  is_logged_out: {is_logged_out}")
+        print(f"  is_active: {is_active} (last seen: {time_since_last_seen} seconds ago)")
+        print(f"  is_connected: {is_connected}")
+        
+        # Set appropriate status message
+        status_message = "Disconnected"
+        if is_logged_out:
+            status_message = "Logged Out"  # Special status for explicit logout
+        elif is_connected:
+            status_message = "Connected"
+        elif plugin_login_status and not is_active:
+            status_message = "Inactive"
+        elif not plugin_login_status:
+            status_message = "Not installed"
+        
+        print(f"  status_message: {status_message}")
+        
+        # Return accurate plugin status
         return jsonify({
             "status": True,
-            "plugin_login": plugin_login_status,
+            "plugin_login": plugin_login_status and not is_logged_out,  # Override login status if logged out
             "is_active": is_active,
+            "is_connected": is_connected,
+            "is_logged_out": is_logged_out,  # New field to explicitly track logout status
             "last_seen_timestamp": last_seen_timestamp,
             "time_since_last_seen": time_since_last_seen,
-            "user_id": user_id
+            "user_id": user_id,
+            "status_message": status_message
         })
         
     except Exception as e:
