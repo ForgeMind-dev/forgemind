@@ -13,6 +13,8 @@ import platform
 import uuid
 import string
 import random
+import socket
+import ssl
 from ... import config
 from ...lib import fusionAddInUtils as futil
 
@@ -133,8 +135,13 @@ def decrypt_data(encrypted_str):
         return None
 
 def authenticate(email, password):
-    """Authenticate with the backend server using email and password."""
+    """Authenticate user with the backend API and store credentials securely."""
     global is_authenticated, auth_token, user_id, was_logged_out
+    
+    # Don't attempt to re-authenticate if user explicitly logged out in this session
+    if was_logged_out:
+        futil.log("Authentication blocked: User explicitly logged out in this session. Please restart Fusion to login again.")
+        return False, "You have logged out. Please restart Fusion to login again."
     
     try:
         # Prepare the authentication payload
@@ -146,15 +153,29 @@ def authenticate(email, password):
         
         # Log the URL being used (without showing credentials)
         futil.log(f"Attempting to authenticate user {email} with backend at URL: {config.API_BASE_URL}")
+        
+        # Create SSL context for secure connections
+        ssl_context = ssl.create_default_context()
+        
+        # For development environments, disable SSL verification if needed
+        if config.DISABLE_SSL_VERIFICATION:
+            futil.log("WARNING: SSL verification disabled - use only in development")
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+        
         auth_req = urllib.request.Request(
             f"{config.API_BASE_URL}/fusion_auth",
             data=json_payload,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": f"ForgeMind-Fusion/{config.VERSION}",
+                "X-Client-Platform": platform.system()
+            },
             method="POST",
         )
         
         try:
-            auth_response = urllib.request.urlopen(auth_req)
+            auth_response = urllib.request.urlopen(auth_req, context=ssl_context, timeout=15)
             
             if auth_response.getcode() != 200:
                 futil.log(f"Authentication failed with status code: {auth_response.getcode()}")
@@ -203,41 +224,44 @@ def authenticate(email, password):
                 return False, "Invalid response format from server"
                 
         except urllib.error.HTTPError as http_error:
-            error_message = f"HTTP Error during authentication: {http_error.code}"
+            error_msg = f"HTTP Error during authentication: {http_error.code}"
+            detailed_error = f"Server error response: {http_error.reason}"
             
-            # Try to get more detailed error information
+            # Additional error info for debugging
+            futil.log(f"Authentication HTTP error: {error_msg}")
+            futil.log(f"Error reason: {http_error.reason}")
+            futil.log(f"Error headers: {http_error.headers}")
+            
+            if http_error.code == 403:
+                futil.log("Forbidden - the server is rejecting the request. Check if the backend is properly configured.")
+                detailed_error = "\n\nForbidden - the server is rejecting the request. Check if the backend is properly configured."
+            
+            # Try to read error response body if available
             try:
-                error_body = http_error.read().decode('utf-8')
-                futil.log(f"Server error response: \n{error_body}")
-                error_message += f"\nServer error response: \n{error_body}"
+                error_body = http_error.read().decode("utf-8")
+                futil.log(f"Error response body: {error_body}")
+                if error_body:
+                    try:
+                        error_json = json.loads(error_body)
+                        if error_json.get("message"):
+                            detailed_error += f"\n\nServer message: {error_json.get('message')}"
+                    except:
+                        detailed_error += f"\n\nServer response: {error_body}"
             except:
                 pass
                 
-            # Add specific advice for common error codes
-            if http_error.code == 403:
-                error_message += "\nForbidden - the server is rejecting the request. Check if the backend is properly configured."
-            elif http_error.code == 404:
-                error_message += "\nNot Found - the authentication endpoint doesn't exist. Check if the backend API URL is correct."
-            elif http_error.code == 500:
-                error_message += "\nServer Error - the backend encountered an internal error. Check the server logs."
-            elif http_error.code == 502 or http_error.code == 503 or http_error.code == 504:
-                error_message += "\nServer Unavailable - the backend may be down or restarting. Try again later."
-                
-            futil.log(f"Authentication HTTP error: {error_message}")
-            return False, f"Authentication error: {error_message}"
+            return False, f"{error_msg}\n{detailed_error}"
             
         except urllib.error.URLError as url_error:
-            futil.log(f"URL Error during authentication: {str(url_error)}")
-            suggestions = "\nSuggestions:\n- Check your internet connection\n- Verify the API URL is correct"
+            error_msg = f"URL Error during authentication: {str(url_error.reason)}"
+            futil.log(error_msg)
+            futil.log(f"Using API URL: {config.API_BASE_URL}")
+            return False, f"{error_msg}\n\nPlease check your internet connection and backend URL configuration."
             
-            if "connection refused" in str(url_error).lower():
-                suggestions += "\n- The server may not be running"
-            elif "name resolution" in str(url_error).lower():
-                suggestions += "\n- DNS issue - check if the hostname is correct"
-                
-            error_message = f"Connection error: {str(url_error)}{suggestions}"
-            futil.log(error_message)
-            return False, error_message
+        except Exception as e:
+            error_msg = f"Unexpected error during authentication: {str(e)}"
+            futil.log(error_msg)
+            return False, error_msg
     
     except Exception as e:
         error_trace = traceback.format_exc()
@@ -387,14 +411,36 @@ def load_auth_data():
         verify_req = urllib.request.Request(
             f"{config.API_BASE_URL}/verify_token",
             data=json.dumps({"token": auth_token}).encode("utf-8"),
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": f"ForgeMind-Fusion/{config.VERSION}",
+                "X-Client-Platform": platform.system()
+            },
             method="POST",
         )
         
-        verify_response = urllib.request.urlopen(verify_req)
+        # Create SSL context for secure connections
+        ssl_context = ssl.create_default_context()
+        
+        # For development environments, disable SSL verification if needed
+        if config.DISABLE_SSL_VERIFICATION:
+            ssl_context.check_hostname = False
+            ssl_context.verify_mode = ssl.CERT_NONE
+        
+        try:
+            verify_response = urllib.request.urlopen(verify_req, context=ssl_context, timeout=15)
+        except urllib.error.HTTPError as e:
+            futil.log(f"Token verification failed with HTTP error: {e.code} - {e.reason}")
+            return False
+        except urllib.error.URLError as e:
+            futil.log(f"Token verification connection error: {e.reason}")
+            return False
+        except Exception as e:
+            futil.log(f"Token verification unexpected error: {str(e)}")
+            return False
         
         if verify_response.getcode() != 200:
-            futil.log("Token verification failed")
+            futil.log("Token verification failed with status code: " + str(verify_response.getcode()))
             return False
         
         response_data = verify_response.read().decode("utf-8")
@@ -435,10 +481,23 @@ def logout():
                 logout_req = urllib.request.Request(
                     f"{config.API_BASE_URL}/plugin_logout",
                     data=json.dumps({"user_id": uid_to_clear}).encode("utf-8"),
-                    headers={"Content-Type": "application/json"},
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": f"ForgeMind-Fusion/{config.VERSION}",
+                        "X-Client-Platform": platform.system()
+                    },
                     method="POST",
                 )
-                logout_response = urllib.request.urlopen(logout_req)
+                
+                # Create SSL context for secure connections
+                ssl_context = ssl.create_default_context()
+                
+                # For development environments, disable SSL verification if needed
+                if config.DISABLE_SSL_VERIFICATION:
+                    ssl_context.check_hostname = False
+                    ssl_context.verify_mode = ssl.CERT_NONE
+                
+                logout_response = urllib.request.urlopen(logout_req, context=ssl_context, timeout=10)
                 response_data = logout_response.read().decode('utf-8')
                 futil.log(f"Logout notification sent to backend: {response_data}")
             except Exception as e:

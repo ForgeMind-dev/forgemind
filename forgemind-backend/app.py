@@ -16,17 +16,41 @@ from typing import Optional
 # Load environment variables from .env file
 load_dotenv()
 
-# Retrieve Supabase URL and Anon Key from environment variables
-SUPABASE_URL = os.getenv("REACT_APP_SUPABASE_URL")
-SUPABASE_ANON_KEY = os.getenv("REACT_APP_SUPABASE_ANON_KEY")
+# Initialize Supabase client with environment variables
+SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("REACT_APP_SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY") or os.getenv("REACT_APP_SUPABASE_ANON_KEY")
+SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
 
-# Get OpenAI API key from environment variables
+if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+    print("WARNING: Supabase credentials are not properly configured!")
+    print(f"SUPABASE_URL exists: {bool(SUPABASE_URL)}")
+    print(f"SUPABASE_ANON_KEY exists: {bool(SUPABASE_ANON_KEY)}")
+    print("Authentication features may not work correctly.")
+else:
+    print(f"Supabase URL: {SUPABASE_URL[:20]}... (truncated)")
+    print("Supabase credentials found and configured.")
+
+# Initialize OpenAI client with API key
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
 )
 
-# Create a Supabase client
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+# Create a regular Supabase client using anon key
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
+    print("Supabase client initialized successfully")
+    
+    # Additionally create an admin client if service role key is available
+    if SUPABASE_SERVICE_ROLE_KEY:
+        print("Service role key found, initializing admin client")
+        supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
+    else:
+        print("No service role key found. Admin operations will not be available.")
+        supabase_admin = None
+except Exception as e:
+    print(f"ERROR: Failed to initialize Supabase client: {str(e)}")
+    print("Authentication features will not work correctly!")
+    supabase_admin = None
 
 # Initialize Redis client - use REDISCLOUD_URL for Heroku Redis Cloud compatibility
 redis_url = os.getenv("REDISCLOUD_URL", "redis://localhost:6379/0")
@@ -601,22 +625,43 @@ def delete_chat():
 def fusion_auth():
     """Authenticate Fusion 360 plugin user with email and password"""
     try:
+        # Log request details (excluding sensitive information)
+        print(f"Fusion auth request received from IP: {request.remote_addr}")
+        print(f"Request headers: {dict(request.headers)}")
+        
         # Get data from request
         data = request.get_json()
         email = data.get("email")
         password = data.get("password")
         
         if not email or not password:
+            print(f"Fusion auth missing parameters: email={bool(email)}, password={bool(password)}")
             return jsonify({"status": False, "message": "Missing email or password"}), 400
         
-        # Call Supabase auth.sign_in method
-        auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+        # Log Supabase configuration state (without exposing sensitive information)
+        print(f"Supabase configuration: URL exists={bool(SUPABASE_URL)}, Key exists={bool(SUPABASE_ANON_KEY)}")
+        
+        if not SUPABASE_URL or not SUPABASE_ANON_KEY:
+            error_msg = "Backend configuration error: Missing Supabase credentials"
+            print(f"Fusion auth error: {error_msg}")
+            return jsonify({"status": False, "message": error_msg}), 500
+        
+        # Call Supabase auth.sign_in method - this is the correct way to authenticate users
+        # It uses the public anon key and doesn't require admin privileges
+        try:
+            auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
+            print(f"Supabase auth response received: user_exists={bool(auth_response.user)}, session_exists={bool(auth_response.session)}")
+        except Exception as auth_error:
+            error_msg = f"Supabase authentication error: {str(auth_error)}"
+            print(f"Fusion auth error: {error_msg}")
+            return jsonify({"status": False, "message": error_msg}), 401
         
         # We need both user and session objects from the response
         if not auth_response.user or not auth_response.session:
+            print(f"Invalid auth response: user={bool(auth_response.user)}, session={bool(auth_response.session)}")
             return jsonify({"status": False, "message": "Invalid email or password"}), 401
         
-        # Get user and session from result
+        # Get user and session from result - these are the standard fields from Supabase auth response
         user = auth_response.user
         session = auth_response.session
         
@@ -681,11 +726,47 @@ def verify_token():
                 # In production, you'd actually decrypt and validate the token
                 
                 # Query Supabase for a valid user to use for testing
-                valid_users = supabase.table("users").select("id").limit(1).execute()
-                if valid_users.data and len(valid_users.data) > 0:
-                    test_user_id = valid_users.data[0]["id"]
-                else:
-                    # Fallback to a test user ID if no users found
+                try:
+                    # First attempt to get a user through admin API if available
+                    test_user_id = None
+                    
+                    if supabase_admin:
+                        try:
+                            # Use admin API to get first user (proper admin approach)
+                            admin_users = supabase_admin.auth.admin.list_users(page=1, per_page=1)
+                            if admin_users and admin_users.users and len(admin_users.users) > 0:
+                                test_user_id = admin_users.users[0].id
+                                print(f"Retrieved test user via admin API: {test_user_id[:8]}...")
+                        except Exception as admin_error:
+                            print(f"Admin API error: {str(admin_error)}")
+                    
+                    # Try profiles table if admin API failed or unavailable
+                    if not test_user_id:
+                        try:
+                            profiles = supabase.from_("profiles").select("id").limit(1).execute()
+                            if profiles.data and len(profiles.data) > 0:
+                                test_user_id = profiles.data[0]["id"]
+                                print(f"Retrieved test user via profiles table: {test_user_id[:8]}...")
+                        except Exception as profiles_error:
+                            print(f"Profiles table error: {str(profiles_error)}")
+                    
+                    # Final fallback to users table (may be restricted)
+                    if not test_user_id:
+                        try:
+                            users = supabase.from_("users").select("id").limit(1).execute()
+                            if users.data and len(users.data) > 0:
+                                test_user_id = users.data[0]["id"]
+                                print(f"Retrieved test user via users table: {test_user_id[:8]}...")
+                        except Exception as users_error:
+                            print(f"Users table error: {str(users_error)}")
+                    
+                    # Last resort fallback
+                    if not test_user_id:
+                        test_user_id = "test_user_123"
+                        print("No users found, using fallback test user ID")
+                    
+                except Exception as auth_error:
+                    print(f"Warning: Error retrieving user data: {str(auth_error)}")
                     test_user_id = "test_user_123"
                 
                 # Return a successful response with a temporary token and user ID
@@ -802,11 +883,43 @@ def check_plugin_login():
         # Check Supabase for user existence - this provides an extra layer of validation
         # that the user_id is valid and belongs to a real user
         try:
-            # Use a lightweight query that just checks if the user exists
-            user_check = supabase.from_("users").select("id").eq("id", user_id).limit(1).execute()
-            user_exists = user_check.data and len(user_check.data) > 0
+            # Try different approaches based on available credentials
+            user_exists = False
+            
+            # First try admin API if available (most reliable)
+            if supabase_admin:
+                try:
+                    user_data = supabase_admin.auth.admin.get_user_by_id(user_id)
+                    user_exists = user_data and user_data.user and user_data.user.id
+                    if user_exists:
+                        print(f"User {user_id} verified via admin API")
+                except Exception as admin_error:
+                    print(f"Warning: Admin API check failed: {str(admin_error)}")
+            
+            # If admin not available or failed, try regular auth API (may work with user's token)
             if not user_exists:
-                print(f"WARNING: User {user_id} not found in database")
+                try:
+                    # Try with a public profiles table first - this is the preferred approach
+                    # when not using admin credentials
+                    profiles_data = supabase.from_("profiles").select("id").eq("id", user_id).limit(1).execute()
+                    user_exists = profiles_data.data and len(profiles_data.data) > 0
+                    if user_exists:
+                        print(f"User {user_id} verified via profiles table")
+                except Exception as profiles_error:
+                    print(f"Warning: Profiles table check failed: {str(profiles_error)}")
+            
+            # Last resort - try the users table directly (not recommended, may be restricted)
+            if not user_exists:
+                try:
+                    users_data = supabase.from_("users").select("id").eq("id", user_id).limit(1).execute()
+                    user_exists = users_data.data and len(users_data.data) > 0
+                    if user_exists:
+                        print(f"User {user_id} verified via users table")
+                except Exception as users_error:
+                    print(f"Warning: Users table check failed: {str(users_error)}")
+            
+            if not user_exists:
+                print(f"WARNING: User {user_id} not found in database using any method")
                 # Consider the user logged out if they don't exist in the database
                 explicitly_logged_out = True
                 plugin_login_status = False
