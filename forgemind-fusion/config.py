@@ -67,16 +67,20 @@ API_BASE_URL = os.environ.get("API_BASE_URL", default_url)
 print(f"Using API_BASE_URL: {API_BASE_URL}")
 
 # SSL verification configuration
-# In production, this should always be True
-# Set to False only for debugging HTTPS connection issues
-DISABLE_SSL_VERIFICATION = False
+# TEMPORARILY DISABLED FOR DEBUGGING - SET BACK TO TRUE AFTER FIXING CONNECTION ISSUES
+DISABLE_SSL_VERIFICATION = True
+
+# Use a proxy for debugging (set to None to disable)
+HTTP_PROXY = None  # Example: "http://localhost:8888"
 
 # Add version information
 VERSION = "1.0.0"
 
 # Connection settings
-CONNECTION_TIMEOUT = 15  # seconds
+CONNECTION_TIMEOUT = 30  # seconds - increased from 15 for better reliability
 CONNECTION_RETRIES = 3
+MAX_RETRY_DELAY = 5  # seconds
 
 # Enable additional debugging
 DEBUG_HTTP_REQUESTS = True
+DEBUG_RESPONSE_BODIES = True  # Log full response bodies for debugging

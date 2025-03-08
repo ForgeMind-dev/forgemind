@@ -762,12 +762,12 @@ def verify_token():
                     
                     # Last resort fallback
                     if not test_user_id:
-                        test_user_id = "test_user_123"
-                        print("No users found, using fallback test user ID")
+                        test_user_id = "test_user"
+                        print(f"No users found, using hardcoded test user ID: {test_user_id[:8]}...")
                     
                 except Exception as auth_error:
                     print(f"Warning: Error retrieving user data: {str(auth_error)}")
-                    test_user_id = "test_user_123"
+                    test_user_id = "test_user"
                 
                 # Return a successful response with a temporary token and user ID
                 return jsonify({
