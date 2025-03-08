@@ -13,8 +13,6 @@ import platform
 import uuid
 import string
 import random
-import socket
-import ssl
 from ... import config
 from ...lib import fusionAddInUtils as futil
 
@@ -135,13 +133,8 @@ def decrypt_data(encrypted_str):
         return None
 
 def authenticate(email, password):
-    """Authenticate user with the backend API and store credentials securely."""
+    """Authenticate with the backend server using email and password."""
     global is_authenticated, auth_token, user_id, was_logged_out
-    
-    # Don't attempt to re-authenticate if user explicitly logged out in this session
-    if was_logged_out:
-        futil.log("Authentication blocked: User explicitly logged out in this session. Please restart Fusion to login again.")
-        return False, "You have logged out. Please restart Fusion to login again."
     
     try:
         # Prepare the authentication payload
@@ -156,16 +149,12 @@ def authenticate(email, password):
         auth_req = urllib.request.Request(
             f"{config.API_BASE_URL}/fusion_auth",
             data=json_payload,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": f"ForgeMind-Fusion/{config.VERSION}",
-                "X-Client-Platform": platform.system()
-            },
+            headers={"Content-Type": "application/json"},
             method="POST",
         )
         
         try:
-            auth_response = urllib.request.urlopen(auth_req, context=ssl_context, timeout=15)
+            auth_response = urllib.request.urlopen(auth_req)
             
             if auth_response.getcode() != 200:
                 futil.log(f"Authentication failed with status code: {auth_response.getcode()}")
@@ -370,36 +359,14 @@ def load_auth_data():
         verify_req = urllib.request.Request(
             f"{config.API_BASE_URL}/verify_token",
             data=json.dumps({"token": auth_token}).encode("utf-8"),
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": f"ForgeMind-Fusion/{config.VERSION}",
-                "X-Client-Platform": platform.system()
-            },
+            headers={"Content-Type": "application/json"},
             method="POST",
         )
         
-        # Create SSL context for secure connections
-        ssl_context = ssl.create_default_context()
-        
-        # For development environments, disable SSL verification if needed
-        if config.DISABLE_SSL_VERIFICATION:
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-        
-        try:
-            verify_response = urllib.request.urlopen(verify_req, context=ssl_context, timeout=15)
-        except urllib.error.HTTPError as e:
-            futil.log(f"Token verification failed with HTTP error: {e.code} - {e.reason}")
-            return False
-        except urllib.error.URLError as e:
-            futil.log(f"Token verification connection error: {e.reason}")
-            return False
-        except Exception as e:
-            futil.log(f"Token verification unexpected error: {str(e)}")
-            return False
+        verify_response = urllib.request.urlopen(verify_req)
         
         if verify_response.getcode() != 200:
-            futil.log("Token verification failed with status code: " + str(verify_response.getcode()))
+            futil.log("Token verification failed")
             return False
         
         response_data = verify_response.read().decode("utf-8")
@@ -440,23 +407,10 @@ def logout():
                 logout_req = urllib.request.Request(
                     f"{config.API_BASE_URL}/plugin_logout",
                     data=json.dumps({"user_id": uid_to_clear}).encode("utf-8"),
-                    headers={
-                        "Content-Type": "application/json",
-                        "User-Agent": f"ForgeMind-Fusion/{config.VERSION}",
-                        "X-Client-Platform": platform.system()
-                    },
+                    headers={"Content-Type": "application/json"},
                     method="POST",
                 )
-                
-                # Create SSL context for secure connections
-                ssl_context = ssl.create_default_context()
-                
-                # For development environments, disable SSL verification if needed
-                if config.DISABLE_SSL_VERIFICATION:
-                    ssl_context.check_hostname = False
-                    ssl_context.verify_mode = ssl.CERT_NONE
-                
-                logout_response = urllib.request.urlopen(logout_req, context=ssl_context, timeout=10)
+                logout_response = urllib.request.urlopen(logout_req)
                 response_data = logout_response.read().decode('utf-8')
                 futil.log(f"Logout notification sent to backend: {response_data}")
             except Exception as e:

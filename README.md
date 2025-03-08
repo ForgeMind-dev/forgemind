@@ -9,37 +9,6 @@ This is the monorepo of ForgeMind. The reliability of this product is dependent 
 3. We do not have a testing process, so we have to keep a healthy environment.
 4. Make sure that you are modifying git history at the root level directory, not just within each subfolder (forgemind-electron, forgemind-backend, etc).
 5. As you begin to touch the CAD integrations, be extra careful to **READ THE FUCKING MANUAL**
-
-## Heroku Setup Instructions
-
-### Configuring Supabase Authentication
-
-For proper authentication, you need to set up the following environment variables in Heroku:
-
-1. **Regular client credentials** (for normal operations):
-```
-heroku config:set SUPABASE_URL=your_supabase_url --app forgemind-backend
-heroku config:set SUPABASE_ANON_KEY=your_supabase_anon_key --app forgemind-backend
-```
-
-2. **Admin client credentials** (for admin operations, such as user management):
-```
-heroku config:set SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key --app forgemind-backend
-```
-
-The service role key can be found in your Supabase project settings under "API" > "Project API Keys".
-
-**Important**: The service role key has admin privileges and should never be exposed to the client-side code.
-
-### Authentication Flow
-
-The application uses different authentication approaches depending on the context:
-
-- **Frontend (webapp)**: Uses standard Supabase client-side auth with `supabase.auth.getUser()`
-- **Backend (Python)**: Uses a combination of methods based on available credentials:
-  - Direct token validation with `supabase.auth.get_user(token)`
-  - Admin user operations with `supabase_admin.auth.admin.list_users()` (requires service role key)
-  - Database queries to verify user existence
 ```
 forgemind
 ├─ README.md

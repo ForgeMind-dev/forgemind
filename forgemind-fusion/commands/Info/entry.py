@@ -18,8 +18,6 @@ from ...lib import fusionAddInUtils as futil
 import threading
 import json
 import urllib.request
-import urllib.error
-import ssl
 
 app = adsk.core.Application.get()
 ui = app.userInterface
@@ -119,15 +117,7 @@ def get_logic():
     )
 
     try:
-        # Create SSL context for secure connections
-        ssl_context = ssl.create_default_context()
-        
-        # For development environments, disable SSL verification if needed
-        if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-        
-        response = urllib.request.urlopen(req, context=ssl_context, timeout=15)
+        response = urllib.request.urlopen(req)
     except urllib.error.HTTPError as e:
         # Check if this is an authentication error
         if e.code == 401:
@@ -180,15 +170,7 @@ def get_logic():
             method="POST",
         )
         try:
-            # Create SSL context for secure connections
-            ssl_context = ssl.create_default_context()
-            
-            # For development environments, disable SSL verification if needed
-            if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-            
-            result_response = urllib.request.urlopen(result_req, context=ssl_context, timeout=15)
+            result_response = urllib.request.urlopen(result_req)
             if result_response.getcode() != 200:
                 futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
         except Exception as e:
@@ -210,15 +192,7 @@ def get_logic():
             method="POST",
         )
         try:
-            # Create SSL context for secure connections
-            ssl_context = ssl.create_default_context()
-            
-            # For development environments, disable SSL verification if needed
-            if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-            
-            error_response = urllib.request.urlopen(error_req, context=ssl_context, timeout=15)
+            error_response = urllib.request.urlopen(error_req)
         except:
             pass
 
@@ -334,16 +308,8 @@ def start():
                 method="POST",
             )
             
-            # Create SSL context for secure connections
-            ssl_context = ssl.create_default_context()
-            
-            # For development environments, disable SSL verification if needed
-            if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-            
             try:
-                test_response = urllib.request.urlopen(test_req, context=ssl_context, timeout=15)
+                test_response = urllib.request.urlopen(test_req)
                 # If we got a 200 response, authentication is working
                 if test_response.getcode() == 200:
                     futil.log("entry.py::start - Authentication verified with backend, starting polling")
@@ -447,165 +413,3 @@ def start_polling():
     timer = threading.Timer(2, schedule_get_logic)
     timer.start()
     futil.log("entry.py::start_polling - Polling started successfully")
-
-
-def poll_backend(chat_id):
-    """Poll the backend for new instructions."""
-    try:
-        # Create the poll request data
-        poll_data = {"user_id": user_id, "chat_id": chat_id}
-        json_payload = json.dumps(poll_data).encode("utf-8")
-        
-        # Create SSL context for secure connections
-        ssl_context = ssl.create_default_context()
-        
-        # For development environments, disable SSL verification if needed
-        if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-            ssl_context.check_hostname = False
-            ssl_context.verify_mode = ssl.CERT_NONE
-        
-        # Set up the request
-        poll_req = urllib.request.Request(
-            f"{config.API_BASE_URL}/poll",
-            data=json_payload,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": f"ForgeMind-Fusion/Polling",
-                "X-Client-Platform": "Fusion360"
-            },
-            method="POST",
-        )
-        
-        # Send the request
-        poll_response = urllib.request.urlopen(poll_req, context=ssl_context, timeout=15)
-        
-        # Process the response
-        if poll_response.getcode() != 200:
-            futil.log(f"Poll request failed with status code: {poll_response.getcode()}")
-            return None
-
-        poll_data = poll_response.read().decode("utf-8")
-        poll_json = json.loads(poll_data)
-        
-        if not poll_json.get("status"):
-            # futil.log("entry.py::get_logic - No instructions found when polling")
-            return None
-        
-        futil.log(f"entry.py::get_logic - Polling message: {poll_json.get('message', '[NO MESSAGE]')}")
-        
-        # Call /get_instructions
-        req = urllib.request.Request(
-            f"{config.API_BASE_URL}/get_instructions",
-            data=json_payload,
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-
-        try:
-            # Create SSL context for secure connections
-            ssl_context = ssl.create_default_context()
-            
-            # For development environments, disable SSL verification if needed
-            if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-                ssl_context.check_hostname = False
-                ssl_context.verify_mode = ssl.CERT_NONE
-            
-            response = urllib.request.urlopen(req, context=ssl_context, timeout=15)
-        except urllib.error.HTTPError as e:
-            # Check if this is an authentication error
-            if e.code == 401:
-                try:
-                    error_data = json.loads(e.read().decode("utf-8"))
-                    if error_data.get("authentication_required"):
-                        futil.log("entry.py::get_logic - Server indicates authentication required, stopping polling")
-                        # If server says we need to authenticate, stop polling
-                        stop_polling()
-                        return
-                except:
-                    pass
-            futil.log(f"entry.py::get_logic - Error in get_instructions request: {e}")
-            return
-        except Exception as e:
-            futil.log(f"entry.py::get_logic - General error in get_instructions request: {e}")
-            return
-        
-        if response.getcode() != 200:
-            futil.log(f"entry.py::get_logic - Backend returned status code {response.getcode()}")
-            return
-        
-        response_data = response.read().decode("utf-8")
-        json_data = json.loads(response_data)
-        logic = json_data.get("instructions", None)
-        chat_id = json_data.get("chat_id", None)  # Extract chat_id from response
-        operation_id = json_data.get("operation_id", None)  # Extract operation_id for tracking
-        
-        if not logic:
-            futil.log(f"entry.py::get_logic - get_instructions returned no logic {response.getcode()}")
-            return
-
-        futil.log(f"entry.py::get_logic - get_instructions returned logic for chat {chat_id}:\n\n[\n{logic}\n]")
-        
-        try:
-            # Pass chat_id to run_logic to maintain chat context
-            debug_log(f"Executing operation for chat_id={chat_id}, operation_id={operation_id}")
-            run_logic_result = run_logic(logic, chat_id)
-            
-            # Add user_id to result payload
-            run_logic_result["user_id"] = login.get_user_id()
-            run_logic_result["operation_id"] = operation_id  # Include operation_id in the result
-
-            # Send run_logic_result to /instruction_result
-            result_payload = json.dumps(run_logic_result).encode("utf-8")
-            result_req = urllib.request.Request(
-                f"{config.API_BASE_URL}/instruction_result",
-                data=result_payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            try:
-                # Create SSL context for secure connections
-                ssl_context = ssl.create_default_context()
-                
-                # For development environments, disable SSL verification if needed
-                if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-                    ssl_context.check_hostname = False
-                    ssl_context.verify_mode = ssl.CERT_NONE
-                
-                result_response = urllib.request.urlopen(result_req, context=ssl_context, timeout=15)
-                if result_response.getcode() != 200:
-                    futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
-            except Exception as e:
-                futil.log(f"entry.py::get_logic - Error in result request: {e}")
-        except Exception as e:
-            futil.log(f"entry.py::get_logic - Error executing logic: {e}")
-            # Send error result
-            error_result = {
-                "user_id": login.get_user_id(),
-                "operation_id": operation_id,
-                "status": "error",
-                "message": str(e)
-            }
-            error_payload = json.dumps(error_result).encode("utf-8")
-            error_req = urllib.request.Request(
-                f"{config.API_BASE_URL}/instruction_result",
-                data=error_payload,
-                headers={"Content-Type": "application/json"},
-                method="POST",
-            )
-            try:
-                # Create SSL context for secure connections
-                ssl_context = ssl.create_default_context()
-                
-                # For development environments, disable SSL verification if needed
-                if hasattr(config, 'DISABLE_SSL_VERIFICATION') and config.DISABLE_SSL_VERIFICATION:
-                    ssl_context.check_hostname = False
-                    ssl_context.verify_mode = ssl.CERT_NONE
-                
-                error_response = urllib.request.urlopen(error_req, context=ssl_context, timeout=15)
-            except:
-                pass
-
-        return run_logic_result
-    except Exception as e:
-        futil.log(f"entry.py::poll_backend - Error in poll_backend: {e}")
-        return None

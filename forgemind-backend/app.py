@@ -16,41 +16,17 @@ from typing import Optional
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize Supabase client with environment variables
-SUPABASE_URL = os.getenv("SUPABASE_URL") or os.getenv("REACT_APP_SUPABASE_URL")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY") or os.getenv("REACT_APP_SUPABASE_ANON_KEY")
-SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY")
+# Retrieve Supabase URL and Anon Key from environment variables
+SUPABASE_URL = os.getenv("REACT_APP_SUPABASE_URL")
+SUPABASE_ANON_KEY = os.getenv("REACT_APP_SUPABASE_ANON_KEY")
 
-if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-    print("WARNING: Supabase credentials are not properly configured!")
-    print(f"SUPABASE_URL exists: {bool(SUPABASE_URL)}")
-    print(f"SUPABASE_ANON_KEY exists: {bool(SUPABASE_ANON_KEY)}")
-    print("Authentication features may not work correctly.")
-else:
-    print(f"Supabase URL: {SUPABASE_URL[:20]}... (truncated)")
-    print("Supabase credentials found and configured.")
-
-# Initialize OpenAI client with API key
+# Get OpenAI API key from environment variables
 client = OpenAI(
     api_key=os.environ.get("OPENAI_API_KEY"),  # This is the default and can be omitted
 )
 
-# Create a regular Supabase client using anon key
-try:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
-    print("Supabase client initialized successfully")
-    
-    # Additionally create an admin client if service role key is available
-    if SUPABASE_SERVICE_ROLE_KEY:
-        print("Service role key found, initializing admin client")
-        supabase_admin: Client = create_client(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY)
-    else:
-        print("No service role key found. Admin operations will not be available.")
-        supabase_admin = None
-except Exception as e:
-    print(f"ERROR: Failed to initialize Supabase client: {str(e)}")
-    print("Authentication features will not work correctly!")
-    supabase_admin = None
+# Create a Supabase client
+supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # Initialize Redis client - use REDISCLOUD_URL for Heroku Redis Cloud compatibility
 redis_url = os.getenv("REDISCLOUD_URL", "redis://localhost:6379/0")
@@ -625,43 +601,22 @@ def delete_chat():
 def fusion_auth():
     """Authenticate Fusion 360 plugin user with email and password"""
     try:
-        # Log request details (excluding sensitive information)
-        print(f"Fusion auth request received from IP: {request.remote_addr}")
-        print(f"Request headers: {dict(request.headers)}")
-        
         # Get data from request
         data = request.get_json()
         email = data.get("email")
         password = data.get("password")
         
         if not email or not password:
-            print(f"Fusion auth missing parameters: email={bool(email)}, password={bool(password)}")
             return jsonify({"status": False, "message": "Missing email or password"}), 400
         
-        # Log Supabase configuration state (without exposing sensitive information)
-        print(f"Supabase configuration: URL exists={bool(SUPABASE_URL)}, Key exists={bool(SUPABASE_ANON_KEY)}")
-        
-        if not SUPABASE_URL or not SUPABASE_ANON_KEY:
-            error_msg = "Backend configuration error: Missing Supabase credentials"
-            print(f"Fusion auth error: {error_msg}")
-            return jsonify({"status": False, "message": error_msg}), 500
-        
-        # Call Supabase auth.sign_in method - this is the correct way to authenticate users
-        # It uses the public anon key and doesn't require admin privileges
-        try:
-            auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
-            print(f"Supabase auth response received: user_exists={bool(auth_response.user)}, session_exists={bool(auth_response.session)}")
-        except Exception as auth_error:
-            error_msg = f"Supabase authentication error: {str(auth_error)}"
-            print(f"Fusion auth error: {error_msg}")
-            return jsonify({"status": False, "message": error_msg}), 401
+        # Call Supabase auth.sign_in method
+        auth_response = supabase.auth.sign_in_with_password({"email": email, "password": password})
         
         # We need both user and session objects from the response
         if not auth_response.user or not auth_response.session:
-            print(f"Invalid auth response: user={bool(auth_response.user)}, session={bool(auth_response.session)}")
             return jsonify({"status": False, "message": "Invalid email or password"}), 401
         
-        # Get user and session from result - these are the standard fields from Supabase auth response
+        # Get user and session from result
         user = auth_response.user
         session = auth_response.session
         
@@ -697,50 +652,13 @@ def fusion_auth():
 def verify_token():
     """Verify a Supabase authentication token or encrypted token data."""
     try:
-        # Get request information for debugging
-        print(f"Verify token request received from IP: {request.remote_addr}")
-        print(f"Request headers: {dict(request.headers)}")
-        
         data = request.get_json()
         
         if not data:
-            error_msg = "No JSON data provided"
-            print(f"Verify token error: {error_msg}")
-            return jsonify({"status": False, "message": error_msg}), 400
+            return jsonify({"status": False, "message": "No JSON data provided"}), 400
             
         token = data.get("token")
         encrypted_data = data.get("encrypted_data")
-        
-        # Print token state for debugging (mask most of it)
-        if token and len(token) > 10:
-            token_preview = token[:5] + "..." + token[-5:]
-            print(f"Token verification request with token: {token_preview}")
-        elif token:
-            print(f"Token verification request with very short token (possible error)")
-        else:
-            print(f"Token verification request with no token provided")
-            
-        # Special override for the Fusion plugin test - accept the test user without further validation
-        # if they're using our user credentials from ForgeMind
-        # This is a temporary fix to ensure authentication works even if Supabase tables are not set up
-        if token and "beratforgemind" in token:
-            print("Special test token detected - bypassing verification for demonstration")
-            return jsonify({
-                "status": True,
-                "message": "Token verified via special test bypass",
-                "user_id": "5fa93893-924b-4654-b8ed-260c26bfd976",
-                "token": token
-            })
-        
-        # Special override for our specific user email we're testing with
-        if token and "5fa93893-924b-4654-b8ed-260c26bfd976" in token:
-            print("Test user token detected - bypassing verification for demonstration")
-            return jsonify({
-                "status": True,
-                "message": "Token verified via user ID match",
-                "user_id": "5fa93893-924b-4654-b8ed-260c26bfd976",
-                "token": token
-            })
         
         # Handle encrypted data verification (used by Fusion add-in)
         if token == "VERIFY_NEEDED" and encrypted_data:
@@ -756,59 +674,21 @@ def verify_token():
                     decoded = base64.b64decode(encrypted_data)
                     if not decoded or len(decoded) < 32:  # Arbitrary minimum size
                         return jsonify({"status": False, "message": "Invalid encrypted data"}), 401
-                except Exception as decode_error:
-                    print(f"Base64 decode error: {str(decode_error)}")
+                except Exception:
                     return jsonify({"status": False, "message": "Invalid base64 data"}), 401
                 
                 # For demo purposes, we'll extract a user ID from the session of the request
                 # In production, you'd actually decrypt and validate the token
                 
                 # Query Supabase for a valid user to use for testing
-                try:
-                    # First attempt to get a user through admin API if available
-                    test_user_id = None
-                    
-                    if supabase_admin:
-                        try:
-                            # Use admin API to get first user (proper admin approach)
-                            admin_users = supabase_admin.auth.admin.list_users(page=1, per_page=1)
-                            if admin_users and admin_users.users and len(admin_users.users) > 0:
-                                test_user_id = admin_users.users[0].id
-                                print(f"Retrieved test user via admin API: {test_user_id[:8]}...")
-                        except Exception as admin_error:
-                            print(f"Admin API error: {str(admin_error)}")
-                    
-                    # Try profiles table if admin API failed or unavailable
-                    if not test_user_id:
-                        try:
-                            profiles = supabase.from_("profiles").select("id").limit(1).execute()
-                            if profiles.data and len(profiles.data) > 0:
-                                test_user_id = profiles.data[0]["id"]
-                                print(f"Retrieved test user via profiles table: {test_user_id[:8]}...")
-                        except Exception as profiles_error:
-                            print(f"Profiles table error: {str(profiles_error)}")
-                    
-                    # Final fallback to users table (may be restricted)
-                    if not test_user_id:
-                        try:
-                            users = supabase.from_("users").select("id").limit(1).execute()
-                            if users.data and len(users.data) > 0:
-                                test_user_id = users.data[0]["id"]
-                                print(f"Retrieved test user via users table: {test_user_id[:8]}...")
-                        except Exception as users_error:
-                            print(f"Users table error: {str(users_error)}")
-                    
-                    # Special fallback - use our test user ID directly
-                    # This is our known user ID from earlier curl test
-                    if not test_user_id:
-                        test_user_id = "5fa93893-924b-4654-b8ed-260c26bfd976"
-                        print(f"No users found, using hardcoded test user ID: {test_user_id[:8]}...")
-                    
-                except Exception as auth_error:
-                    print(f"Warning: Error retrieving user data: {str(auth_error)}")
-                    test_user_id = "5fa93893-924b-4654-b8ed-260c26bfd976"
+                valid_users = supabase.table("users").select("id").limit(1).execute()
+                if valid_users.data and len(valid_users.data) > 0:
+                    test_user_id = valid_users.data[0]["id"]
+                else:
+                    # Fallback to a test user ID if no users found
+                    test_user_id = "test_user_123"
                 
-                # Return a successful response with the test user ID
+                # Return a successful response with a temporary token and user ID
                 return jsonify({
                     "status": True,
                     "message": "Token verified via encrypted data",
@@ -823,65 +703,20 @@ def verify_token():
                 
         # Handle standard token verification (direct token provided)
         if not token or token.startswith("TEMPORARY_TOKEN_"):
-            print(f"Invalid token format: {token if not token else 'TEMPORARY_TOKEN_*'}")
             return jsonify({"status": False, "message": "Valid token is required"}), 400
         
         # Verify the token with Supabase
         try:
-            print(f"Verifying token with Supabase auth API")
             user = supabase.auth.get_user(token)
             if user and user.user and user.user.id:
-                print(f"Token verified successfully for user: {user.user.id[:8]}...")
                 return jsonify({
                     "status": True,
                     "message": "Token is valid",
                     "user_id": user.user.id
                 })
             else:
-                print(f"Token verification failed: Invalid or expired token")
                 return jsonify({"status": False, "message": "Invalid token"}), 401
         except Exception as e:
-            print(f"Token validation error: {str(e)}")
-            
-            # IMPORTANT: If we have a JWT that looks valid but can't be verified with Supabase,
-            # try to extract the user ID from it and validate that way
-            if token and len(token) > 20 and "." in token:
-                try:
-                    import base64
-                    # JWT tokens have 3 parts separated by dots
-                    parts = token.split('.')
-                    if len(parts) >= 2:
-                        # Decode the payload (middle part)
-                        payload = parts[1]
-                        # Add padding if needed
-                        payload += '=' * ((4 - len(payload) % 4) % 4)
-                        decoded = base64.b64decode(payload)
-                        payload_data = json.loads(decoded)
-                        
-                        # Extract subject (user ID) from payload
-                        if 'sub' in payload_data:
-                            user_id = payload_data['sub']
-                            print(f"Extracted user ID from JWT: {user_id[:8]}...")
-                            
-                            # Additional validation can be performed here if needed
-                            # For this demo, we'll assume it's valid if we can extract a user ID
-                            return jsonify({
-                                "status": True,
-                                "message": "Token verified via JWT payload",
-                                "user_id": user_id
-                            })
-                except Exception as jwt_error:
-                    print(f"Error extracting data from JWT: {str(jwt_error)}")
-            
-            # Last resort - use our test user
-            if "berat@forgemind.dev" in str(e) or "5fa93893-924b-4654-b8ed-260c26bfd976" in str(e):
-                print("Emergency bypass: Detected our test user in error message")
-                return jsonify({
-                    "status": True,
-                    "message": "Token verified via error bypass (DEMO ONLY)",
-                    "user_id": "5fa93893-924b-4654-b8ed-260c26bfd976"
-                })
-                
             return jsonify({"status": False, "message": f"Token validation error: {str(e)}"}), 401
     
     except Exception as e:
@@ -967,43 +802,11 @@ def check_plugin_login():
         # Check Supabase for user existence - this provides an extra layer of validation
         # that the user_id is valid and belongs to a real user
         try:
-            # Try different approaches based on available credentials
-            user_exists = False
-            
-            # First try admin API if available (most reliable)
-            if supabase_admin:
-                try:
-                    user_data = supabase_admin.auth.admin.get_user_by_id(user_id)
-                    user_exists = user_data and user_data.user and user_data.user.id
-                    if user_exists:
-                        print(f"User {user_id} verified via admin API")
-                except Exception as admin_error:
-                    print(f"Warning: Admin API check failed: {str(admin_error)}")
-            
-            # If admin not available or failed, try regular auth API (may work with user's token)
+            # Use a lightweight query that just checks if the user exists
+            user_check = supabase.from_("profiles").select("id").eq("id", user_id).limit(1).execute()
+            user_exists = user_check.data and len(user_check.data) > 0
             if not user_exists:
-                try:
-                    # Try with a public profiles table first - this is the preferred approach
-                    # when not using admin credentials
-                    profiles_data = supabase.from_("profiles").select("id").eq("id", user_id).limit(1).execute()
-                    user_exists = profiles_data.data and len(profiles_data.data) > 0
-                    if user_exists:
-                        print(f"User {user_id} verified via profiles table")
-                except Exception as profiles_error:
-                    print(f"Warning: Profiles table check failed: {str(profiles_error)}")
-            
-            # Last resort - try the users table directly (not recommended, may be restricted)
-            if not user_exists:
-                try:
-                    users_data = supabase.from_("users").select("id").eq("id", user_id).limit(1).execute()
-                    user_exists = users_data.data and len(users_data.data) > 0
-                    if user_exists:
-                        print(f"User {user_id} verified via users table")
-                except Exception as users_error:
-                    print(f"Warning: Users table check failed: {str(users_error)}")
-            
-            if not user_exists:
-                print(f"WARNING: User {user_id} not found in database using any method")
+                print(f"WARNING: User {user_id} not found in database")
                 # Consider the user logged out if they don't exist in the database
                 explicitly_logged_out = True
                 plugin_login_status = False
