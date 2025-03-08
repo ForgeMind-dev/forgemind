@@ -154,114 +154,179 @@ def authenticate(email, password):
         # Log the URL being used (without showing credentials)
         futil.log(f"Attempting to authenticate user {email} with backend at URL: {config.API_BASE_URL}")
         
-        # Create SSL context for secure connections
+        # Create SSL context for secure connections with enhanced debugging
         ssl_context = ssl.create_default_context()
         
         # For development environments, disable SSL verification if needed
         if config.DISABLE_SSL_VERIFICATION:
-            futil.log("WARNING: SSL verification disabled - use only in development")
+            futil.log("WARNING: SSL verification disabled - FOR DEBUG ONLY")
             ssl_context.check_hostname = False
             ssl_context.verify_mode = ssl.CERT_NONE
+            
+            # Log additional SSL debugging information
+            futil.log(f"SSL Context Configuration:")
+            futil.log(f"  - check_hostname: {ssl_context.check_hostname}")
+            futil.log(f"  - verify_mode: {ssl_context.verify_mode}")
         
+        # Prepare headers with extended debugging information
+        headers = {
+            "Content-Type": "application/json",
+            "User-Agent": f"ForgeMind-Fusion/{config.VERSION} Python/{platform.python_version()} Fusion360",
+            "X-Client-Platform": platform.system() + " " + platform.release(),
+            "Accept": "application/json",
+            "X-Debug-Mode": "true"
+        }
+        
+        futil.log(f"Request headers: {headers}")
+        futil.log(f"Authentication payload size: {len(json_payload)} bytes")
+        
+        # Setup proxy if configured
+        proxy_handler = None
+        if config.HTTP_PROXY:
+            futil.log(f"Using debug proxy: {config.HTTP_PROXY}")
+            proxy_handler = urllib.request.ProxyHandler({
+                'http': config.HTTP_PROXY,
+                'https': config.HTTP_PROXY
+            })
+            # Create opener with proxy
+            opener = urllib.request.build_opener(proxy_handler)
+            urllib.request.install_opener(opener)
+        
+        # Create the authentication request
         auth_req = urllib.request.Request(
             f"{config.API_BASE_URL}/fusion_auth",
             data=json_payload,
-            headers={
-                "Content-Type": "application/json",
-                "User-Agent": f"ForgeMind-Fusion/{config.VERSION}",
-                "X-Client-Platform": platform.system()
-            },
+            headers=headers,
             method="POST",
         )
         
-        try:
-            auth_response = urllib.request.urlopen(auth_req, context=ssl_context, timeout=15)
-            
-            if auth_response.getcode() != 200:
-                futil.log(f"Authentication failed with status code: {auth_response.getcode()}")
-                return False, "Authentication failed. Please check your credentials."
-                
-            # Parse the response
-            response_data = auth_response.read().decode("utf-8")
-            futil.log(f"Authentication response received, status code: {auth_response.getcode()}")
+        # Implement retry logic with exponential backoff
+        retry_count = 0
+        max_retries = config.CONNECTION_RETRIES
+        success = False
+        last_error = None
+        response_data = None
+        
+        while retry_count <= max_retries and not success:
+            if retry_count > 0:
+                # Calculate backoff delay (exponential with jitter)
+                delay = min(config.MAX_RETRY_DELAY, 0.5 * (2 ** retry_count)) + random.uniform(0, 0.5)
+                futil.log(f"Retry {retry_count}/{max_retries} after {delay:.2f}s delay...")
+                time.sleep(delay)
             
             try:
-                json_data = json.loads(response_data)
+                futil.log(f"Sending authentication request (attempt {retry_count+1}/{max_retries+1})...")
+                auth_response = urllib.request.urlopen(auth_req, context=ssl_context, timeout=config.CONNECTION_TIMEOUT)
                 
-                if not json_data.get("status"):
-                    error_msg = json_data.get("message", "Authentication failed")
-                    futil.log(f"Authentication failed with message: {error_msg}")
-                    return False, error_msg
+                # Read the response
+                response_data = auth_response.read().decode("utf-8")
+                futil.log(f"Authentication response received, status code: {auth_response.getcode()}")
                 
-                # Store authentication data
-                is_authenticated = True
-                auth_token = json_data.get("token")
-                user_id = json_data.get("user_id")
+                if config.DEBUG_RESPONSE_BODIES:
+                    futil.log(f"Response body: {response_data}")
                 
-                if not auth_token or not user_id:
-                    futil.log("Authentication missing token or user_id in response")
-                    return False, "Invalid authentication response from server"
+                success = True
+                break
+            
+            except urllib.error.HTTPError as http_error:
+                error_msg = f"HTTP Error during authentication: {http_error.code}"
+                detailed_error = f"Server error response: {http_error.reason}"
                 
-                # Clear the logged out flag since we're successfully logged in now
-                was_logged_out = False
+                # Additional error info for debugging
+                futil.log(f"Authentication HTTP error: {error_msg}")
+                futil.log(f"Error reason: {http_error.reason}")
+                futil.log(f"Error headers: {http_error.headers}")
                 
-                # Log success details
-                futil.log(f"Authentication successful for user ID: {user_id}")
-                
-                # Encrypted storage for auth data
+                # Try to read error response body if available
                 try:
-                    save_auth_data(auth_token, user_id)
-                    futil.log("Authentication data stored securely")
-                except Exception as store_error:
-                    futil.log(f"Warning: Failed to store authentication data: {str(store_error)}")
+                    error_body = http_error.read().decode("utf-8")
+                    futil.log(f"Error response body: {error_body}")
+                    if error_body:
+                        try:
+                            error_json = json.loads(error_body)
+                            if error_json.get("message"):
+                                detailed_error += f"\n\nServer message: {error_json.get('message')}"
+                        except:
+                            detailed_error += f"\n\nServer response: {error_body}"
+                except:
+                    pass
                 
-                # Success!
-                return True, "Authentication successful"
+                # Don't retry for client errors (4xx) except for specific codes that might be retryable
+                if http_error.code >= 400 and http_error.code < 500 and http_error.code not in [408, 429]:
+                    if http_error.code == 403:
+                        futil.log("Forbidden error (403) - this might be due to SSL/TLS verification issues on Heroku")
+                        detailed_error += "\n\nForbidden - 403 errors often happen due to SSL/TLS negotiation issues or incorrect hostname verification."
+                    
+                    futil.log(f"Client error {http_error.code} is not retryable")
+                    last_error = (error_msg, detailed_error)
+                    break
                 
-            except json.JSONDecodeError as json_error:
-                futil.log(f"Error parsing authentication response JSON: {str(json_error)}")
-                futil.log(f"Raw response: {response_data}")
-                return False, "Invalid response format from server"
+                last_error = (error_msg, detailed_error)
+                retry_count += 1
                 
-        except urllib.error.HTTPError as http_error:
-            error_msg = f"HTTP Error during authentication: {http_error.code}"
-            detailed_error = f"Server error response: {http_error.reason}"
+            except urllib.error.URLError as url_error:
+                error_msg = f"URL Error during authentication: {str(url_error.reason)}"
+                futil.log(error_msg)
+                
+                # Check if it's an SSL verification error
+                if isinstance(url_error.reason, ssl.SSLError):
+                    futil.log(f"SSL Error: {url_error.reason}")
+                    futil.log("Consider setting DISABLE_SSL_VERIFICATION=True in config.py for testing")
+                
+                futil.log(f"Using API URL: {config.API_BASE_URL}")
+                last_error = (error_msg, f"{error_msg}\n\nPlease check your internet connection and backend URL configuration.")
+                retry_count += 1
+                
+            except Exception as e:
+                error_msg = f"Unexpected error during authentication: {str(e)}"
+                futil.log(error_msg)
+                last_error = (error_msg, error_msg)
+                retry_count += 1
+        
+        # If we reached maximum retries without success
+        if not success:
+            if last_error:
+                return False, last_error[1]
+            return False, "Authentication failed after multiple attempts"
+        
+        # Parse the response
+        try:
+            json_data = json.loads(response_data)
             
-            # Additional error info for debugging
-            futil.log(f"Authentication HTTP error: {error_msg}")
-            futil.log(f"Error reason: {http_error.reason}")
-            futil.log(f"Error headers: {http_error.headers}")
+            if not json_data.get("status"):
+                error_msg = json_data.get("message", "Authentication failed")
+                futil.log(f"Authentication failed with message: {error_msg}")
+                return False, error_msg
             
-            if http_error.code == 403:
-                futil.log("Forbidden - the server is rejecting the request. Check if the backend is properly configured.")
-                detailed_error = "\n\nForbidden - the server is rejecting the request. Check if the backend is properly configured."
+            # Store authentication data
+            is_authenticated = True
+            auth_token = json_data.get("token")
+            user_id = json_data.get("user_id")
             
-            # Try to read error response body if available
+            if not auth_token or not user_id:
+                futil.log("Authentication missing token or user_id in response")
+                return False, "Invalid authentication response from server"
+            
+            # Clear the logged out flag since we're successfully logged in now
+            was_logged_out = False
+            
+            # Log success details
+            futil.log(f"Authentication successful for user ID: {user_id}")
+            
+            # Encrypted storage for auth data
             try:
-                error_body = http_error.read().decode("utf-8")
-                futil.log(f"Error response body: {error_body}")
-                if error_body:
-                    try:
-                        error_json = json.loads(error_body)
-                        if error_json.get("message"):
-                            detailed_error += f"\n\nServer message: {error_json.get('message')}"
-                    except:
-                        detailed_error += f"\n\nServer response: {error_body}"
-            except:
-                pass
-                
-            return False, f"{error_msg}\n{detailed_error}"
+                save_auth_data(auth_token, user_id)
+                futil.log("Authentication data stored securely")
+            except Exception as store_error:
+                futil.log(f"Warning: Failed to store authentication data: {str(store_error)}")
             
-        except urllib.error.URLError as url_error:
-            error_msg = f"URL Error during authentication: {str(url_error.reason)}"
-            futil.log(error_msg)
-            futil.log(f"Using API URL: {config.API_BASE_URL}")
-            return False, f"{error_msg}\n\nPlease check your internet connection and backend URL configuration."
+            # Success!
+            return True, "Authentication successful"
             
-        except Exception as e:
-            error_msg = f"Unexpected error during authentication: {str(e)}"
-            futil.log(error_msg)
-            return False, error_msg
+        except json.JSONDecodeError as json_error:
+            futil.log(f"Error parsing authentication response JSON: {str(json_error)}")
+            futil.log(f"Raw response: {response_data}")
+            return False, "Invalid response format from server"
     
     except Exception as e:
         error_trace = traceback.format_exc()
