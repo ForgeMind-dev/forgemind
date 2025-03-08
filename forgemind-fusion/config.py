@@ -13,7 +13,11 @@ def load_env_file(env_path=None):
         env_path = os.path.join(current_dir, '.env')
     
     if not os.path.exists(env_path):
+        print(f"Warning: .env file not found at {env_path}")
         return
+    
+    print(f"Loading environment variables from {env_path}")
+    loaded_vars = []
     
     with open(env_path, 'r') as f:
         for line in f:
@@ -32,6 +36,9 @@ def load_env_file(env_path=None):
                 # Set the environment variable if it's not already set
                 if key not in os.environ:
                     os.environ[key] = value
+                    loaded_vars.append(key)
+    
+    print(f"Loaded environment variables: {', '.join(loaded_vars)}")
 
 # Load environment variables
 load_env_file()
@@ -52,4 +59,9 @@ my_panel_name = ADDIN_NAME
 my_panel_after = ''
 
 # Backend API base URL - can be changed in .env file
-API_BASE_URL = os.environ.get("API_BASE_URL", "http://127.0.0.1:5000")
+# Use the production URL as the default (not localhost) to prevent connection issues
+default_url = "https://forgemind-backend-5b7b6de8ddcc.herokuapp.com"
+API_BASE_URL = os.environ.get("API_BASE_URL", default_url)
+
+# Log the API URL for debugging purposes
+print(f"Using API_BASE_URL: {API_BASE_URL}")
