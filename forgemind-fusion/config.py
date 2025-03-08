@@ -65,3 +65,18 @@ API_BASE_URL = os.environ.get("API_BASE_URL", default_url)
 
 # Log the API URL for debugging purposes
 print(f"Using API_BASE_URL: {API_BASE_URL}")
+
+# SSL verification configuration
+# In production, this should always be True
+# Set to False only for debugging HTTPS connection issues
+DISABLE_SSL_VERIFICATION = False
+
+# Add version information
+VERSION = "1.0.0"
+
+# Connection settings
+CONNECTION_TIMEOUT = 15  # seconds
+CONNECTION_RETRIES = 3
+
+# Enable additional debugging
+DEBUG_HTTP_REQUESTS = True
