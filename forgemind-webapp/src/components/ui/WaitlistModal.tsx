@@ -23,10 +23,10 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({ onClose }) => {
 
     if (error) {
       console.error('Error adding to waitlist:', error.message);
-      setErrorMsg('There was an error submitting your info. Please try again.');
+      setErrorMsg('You are already in the waitlist.');
       return;
     }
-    
+
     setSubmitted(true);
   };
 
@@ -75,7 +75,7 @@ const WaitlistModal: React.FC<WaitlistModalProps> = ({ onClose }) => {
                 Join Waitlist
               </button>
             </form>
-            {errorMsg && <p className="error-message">{errorMsg}</p>}
+            {errorMsg && <p className="already-joined">{errorMsg}</p>}
           </>
         ) : (
           <>

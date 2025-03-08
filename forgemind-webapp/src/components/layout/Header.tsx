@@ -7,6 +7,7 @@ import { supabase } from '../../supabaseClient';
 import { User } from '@supabase/supabase-js';
 import PluginStatusIndicator from '../ui/PluginStatusIndicator';
 import { checkPluginLoginStatus } from '../../app/api';
+import ProfileIcon from '../icons/ProfileIcon';
 
 interface HeaderProps {
   onLoginClick?: () => void;
@@ -20,6 +21,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
     isActive: false,
     lastSeen: null as number | null
   });
+  const [profileMenuOpen, setProfileMenuOpen] = useState(false); // New state for profile menu
   const [windowWidth, setWindowWidth] = useState(window.innerWidth);
   const location = useLocation();
   // Update this to match all dashboard routes, including those with chat IDs
@@ -30,11 +32,11 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
     const handleResize = () => {
       setWindowWidth(window.innerWidth);
     };
-    
+
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
-  
+
   useEffect(() => {
     const checkAuth = async () => {
       const { data } = await supabase.auth.getUser();
@@ -43,9 +45,9 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
         setUser(data.user);
       }
     };
-    
+
     checkAuth();
-    
+
     // Listen for auth changes but don't log each event
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       // Only update for meaningful events, skip INITIAL_SESSION to avoid duplicate refreshes
@@ -65,35 +67,35 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
     if (!isDashboardPage || !user) {
       return;
     }
-    
+
     const checkStatus = async () => {
       try {
         const result = await checkPluginLoginStatus(user.id);
-        
+
         if (result.status) {
           // Take is_logged_out into account - if explicitly logged out, override isLoggedIn
           const isPluginLoggedIn = result.is_connected || false;
           const isPluginLoggedOut = result.is_logged_out || false;
-          
+
           setPluginStatus({
             isLoggedIn: isPluginLoggedIn && !isPluginLoggedOut, // Ensure logged out status is respected
             isActive: result.is_active,
             lastSeen: result.last_seen_timestamp
           });
-          
+
           console.log(`Plugin status updated: Connected=${isPluginLoggedIn}, LoggedOut=${isPluginLoggedOut}, Active=${result.is_active}`);
         }
       } catch (error) {
         console.error('Error checking plugin status:', error);
       }
     };
-    
+
     // Initial check
     checkStatus();
-    
+
     // Set up polling interval (every 2 minutes = 120000ms)
     const intervalId = setInterval(checkStatus, 120000);
-    
+
     // Clean up interval on unmount
     return () => clearInterval(intervalId);
   }, [user, isDashboardPage]);
@@ -101,58 +103,40 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
   // Function to manually refresh plugin status
   const handleRefreshPluginStatus = async () => {
     if (!user) return;
-    
+
     try {
       const result = await checkPluginLoginStatus(user.id);
-      
+
       if (result.status) {
         // Take is_logged_out into account - if explicitly logged out, override isLoggedIn
         const isPluginLoggedIn = result.is_connected || false;
         const isPluginLoggedOut = result.is_logged_out || false;
-        
+
         setPluginStatus({
           isLoggedIn: isPluginLoggedIn && !isPluginLoggedOut, // Ensure logged out status is respected
           isActive: result.is_active,
           lastSeen: result.last_seen_timestamp
         });
-        
+
         console.log(`Plugin status manually refreshed: Connected=${isPluginLoggedIn}, LoggedOut=${isPluginLoggedOut}, Active=${result.is_active}`);
       }
     } catch (error) {
       console.error('Error refreshing plugin status:', error);
     }
   };
-  
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.href = '/'; // Redirect to home page
   };
 
+  // Toggle profile menu
+  const toggleProfileMenu = () => {
+    setProfileMenuOpen(!profileMenuOpen);
+  };
+
   // Determine if we should show the plugin status based on screen width
   const showPluginStatus = windowWidth > 700;
-  
-  // Determine if we should show the full email address
-  const showFullEmail = windowWidth >= 900;
-  
-  // Determine if we should show any user info
-  const showUserInfo = windowWidth > 500;
-
-  // Helper function to format email for display
-  const formatEmail = (email: string | undefined) => {
-    if (!email) return '';
-    
-    if (!showFullEmail) {
-      // Show only the part before @ on smaller screens
-      const atIndex = email.indexOf('@');
-      if (atIndex > 0) {
-        return email.substring(0, Math.min(atIndex, 15)) + '...';
-      }
-      return email.substring(0, 15) + '...';
-    }
-    
-    // On larger screens show full email
-    return email;
-  };
 
   return (
     <header className="header">
@@ -161,16 +145,16 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
         <div className="left-section">
           {isDashboardPage ? (
             <>
-              {onToggleSidebar && 
+              {onToggleSidebar &&
                 <button className="menu-btn" onClick={onToggleSidebar}>
                   &#9776;
                 </button>
               }
-              
+
               {/* Plugin status indicator - only shown on dashboard for logged in users */}
               {user && showPluginStatus && (
                 <div className="plugin-status-wrapper">
-                  <PluginStatusIndicator 
+                  <PluginStatusIndicator
                     isLoggedIn={pluginStatus.isLoggedIn}
                     isActive={pluginStatus.isActive}
                     lastSeen={pluginStatus.lastSeen}
@@ -185,7 +169,7 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
             </Link>
           )}
         </div>
-        
+
         {/* Centered logo - only shown on dashboard */}
         {isDashboardPage && (
           <div className="logo-section">
@@ -194,27 +178,36 @@ const Header: React.FC<HeaderProps> = ({ onLoginClick, onToggleSidebar }) => {
             </Link>
           </div>
         )}
-        
-        {/* Auth section on the right */}
-        <div className="auth-section">
+
+        {/* User action section */}
+        <div className="user-actions">
           {user ? (
-            <div className="auth-container">
-              {showUserInfo && (
-                <div className="user-info">
-                  <span className="user-email">{formatEmail(user.email)}</span>
+            <>
+              <button
+                className="profile-button"
+                onClick={toggleProfileMenu}
+              >
+                <ProfileIcon size={24} color="#fff" />
+              </button>
+              {profileMenuOpen && (
+                <div className="profile-menu-modal">
+                  <div>{user.email}</div>
+
+                  <button
+                    className="logout-button"
+                    onClick={handleLogout}
+                  >
+                    Logout
+                  </button>
                 </div>
               )}
-              <button
-                className="logout-button"
-                onClick={handleLogout}
-              >
-                Logout
-              </button>
-            </div>
+            </>
           ) : (
-            onLoginClick && <button className="login-button" onClick={onLoginClick}>
-              Login
-            </button>
+            onLoginClick && (
+              <button className="login-button" onClick={onLoginClick}>
+                Login
+              </button>
+            )
           )}
         </div>
       </div>

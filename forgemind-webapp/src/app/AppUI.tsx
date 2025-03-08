@@ -130,6 +130,21 @@ const AppUI: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen, initialChatId
     }
   }, [initialChatId, chats, isInitializing, navigate]);
 
+  // Effect to close the sidebar when clicking away
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const sidebarElement = document.querySelector('.sidebar');
+      if (sidebarOpen && sidebarElement && !sidebarElement.contains(event.target as Node)) {
+        onToggleSidebar();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [sidebarOpen, onToggleSidebar]);
+
   // Function to load user chats from the database
   const loadUserChats = async (userId: string) => {
     try {
