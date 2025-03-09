@@ -11,6 +11,8 @@
 
 import time
 import adsk.core, adsk.fusion, adsk.cam
+from ...commands.Login import entry as login
+import base64
 import os
 from ... import config
 from ...logic import run_logic, get_workspace_state, set_active_chat, debug_log
@@ -46,13 +48,19 @@ timer = None
 # Flag to check if the timer is running
 is_timer_running = False
 
+
 def save_and_compress_screenshot(filename_prefix):
-    screenshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{filename_prefix}.png")
-    
+    screenshot_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), f"{filename_prefix}.png"
+    )
+
     app.activeViewport.saveAsImageFile(screenshot_path, 1920, 1080)
-    futil.log(f"entry.py::save_and_compress_screenshot - Screenshot saved to {screenshot_path}")
-    
+    futil.log(
+        f"entry.py::save_and_compress_screenshot - Screenshot saved to {screenshot_path}"
+    )
+
     return screenshot_path
+
 
 def delete_files(*file_paths):
     for file_path in file_paths:
@@ -60,19 +68,21 @@ def delete_files(*file_paths):
             os.remove(file_path)
             futil.log(f"entry.py::delete_files - Deleted file {file_path}")
 
+
 def get_logic():
     # Check authentication first - don't poll if not authenticated
     from ...commands.Login import entry as login
+
     if not login.is_user_authenticated():
         futil.log("entry.py::get_logic - User not authenticated, skipping poll")
         return
-    
+
     # Get workspace description
     workspace_desc = get_workspace_state()
-    
+
     # Add user_id to the request
     workspace_desc["user_id"] = login.get_user_id()
-    
+
     json_payload = json.dumps(workspace_desc).encode("utf-8")
 
     # Call /poll first with workspace description
@@ -90,9 +100,16 @@ def get_logic():
             try:
                 error_data = json.loads(e.read().decode("utf-8"))
                 if error_data.get("authentication_required"):
-                    futil.log("entry.py::get_logic - Server indicates authentication required, stopping polling")
+                    futil.log(
+                        "entry.py::get_logic - Server indicates authentication required, stopping polling"
+                    )
                     # If server says we need to authenticate, tell the user and stop polling
-                    ui.messageBox("You need to log in again to use ForgeMind.", "Authentication Required", 0, 1)
+                    ui.messageBox(
+                        "You need to log in again to use ForgeMind.",
+                        "Authentication Required",
+                        0,
+                        1,
+                    )
                     # Reset local authentication state
                     login.was_logged_out = True
                     login.is_authenticated = False
@@ -101,7 +118,7 @@ def get_logic():
                     return
             except:
                 pass
-                
+
         futil.log(f"entry.py::get_logic - Error in poll request: {e}")
         return
     except Exception as e:
@@ -114,13 +131,15 @@ def get_logic():
 
     poll_data = poll_response.read().decode("utf-8")
     poll_json = json.loads(poll_data)
-    
+
     if not poll_json.get("status"):
         # futil.log("entry.py::get_logic - No instructions found when polling")
         return None
-    
-    futil.log(f"entry.py::get_logic - Polling message: {poll_json.get('message', '[NO MESSAGE]')}")
-    
+
+    futil.log(
+        f"entry.py::get_logic - Polling message: {poll_json.get('message', '[NO MESSAGE]')}"
+    )
+
     # Call /get_instructions
     req = urllib.request.Request(
         f"{config.API_BASE_URL}/get_instructions",
@@ -137,7 +156,9 @@ def get_logic():
             try:
                 error_data = json.loads(e.read().decode("utf-8"))
                 if error_data.get("authentication_required"):
-                    futil.log("entry.py::get_logic - Server indicates authentication required, stopping polling")
+                    futil.log(
+                        "entry.py::get_logic - Server indicates authentication required, stopping polling"
+                    )
                     # If server says we need to authenticate, stop polling
                     stop_polling()
                     return
@@ -146,41 +167,59 @@ def get_logic():
         futil.log(f"entry.py::get_logic - Error in get_instructions request: {e}")
         return
     except Exception as e:
-        futil.log(f"entry.py::get_logic - General error in get_instructions request: {e}")
+        futil.log(
+            f"entry.py::get_logic - General error in get_instructions request: {e}"
+        )
         return
-        
+
     if response.getcode() != 200:
-        futil.log(f"entry.py::get_logic - Backend returned status code {response.getcode()}")
+        futil.log(
+            f"entry.py::get_logic - Backend returned status code {response.getcode()}"
+        )
         return
-    
+
     response_data = response.read().decode("utf-8")
     json_data = json.loads(response_data)
     logic = json_data.get("instructions", None)
     chat_id = json_data.get("chat_id", None)  # Extract chat_id from response
-    operation_id = json_data.get("operation_id", None)  # Extract operation_id for tracking
-    
+    operation_id = json_data.get(
+        "operation_id", None
+    )  # Extract operation_id for tracking
+
     if not logic:
-        futil.log(f"entry.py::get_logic - get_instructions returned no logic {response.getcode()}")
+        futil.log(
+            f"entry.py::get_logic - get_instructions returned no logic {response.getcode()}"
+        )
         return
 
-    futil.log(f"entry.py::get_logic - get_instructions returned logic for chat {chat_id}:\n\n[\n{logic}\n]")
-    
+    futil.log(
+        f"entry.py::get_logic - get_instructions returned logic for chat {chat_id}:\n\n[\n{logic}\n]"
+    )
+
     try:
         # Pass chat_id to run_logic to maintain chat context
-        debug_log(f"Executing operation for chat_id={chat_id}, operation_id={operation_id}")
-        
+        debug_log(
+            f"Executing operation for chat_id={chat_id}, operation_id={operation_id}"
+        )
+
         # Save and compress screenshots before and after execution
-        before_screenshot_path = save_and_compress_screenshot("workspace_screenshot_before")
+        before_screenshot_path = save_and_compress_screenshot(
+            "workspace_screenshot_before"
+        )
         run_logic_result = run_logic(logic, chat_id)
-        after_screenshot_path, compressed_after_screenshot_path = save_and_compress_screenshot("workspace_screenshot_after")
-        
+        after_screenshot_path = save_and_compress_screenshot(
+            "workspace_screenshot_after"
+        )
+
         # Add user_id and screenshots to result payload
         run_logic_result["user_id"] = login.get_user_id()
-        run_logic_result["operation_id"] = operation_id  # Include operation_id in the result
+        run_logic_result["operation_id"] = (
+            operation_id  # Include operation_id in the result
+        )
         with open(before_screenshot_path, "rb") as before_img_file:
-            run_logic_result["before_screenshot"] = before_img_file.read()
+            run_logic_result["before_screenshot"] = base64.b64encode(before_img_file.read()).decode('utf-8')
         with open(after_screenshot_path, "rb") as after_img_file:
-            run_logic_result["after_screenshot"] = after_img_file.read()
+            run_logic_result["after_screenshot"] = base64.b64encode(after_img_file.read()).decode('utf-8')
 
         # Send run_logic_result to /instruction_result
         result_payload = json.dumps(run_logic_result).encode("utf-8")
@@ -190,14 +229,14 @@ def get_logic():
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        try:
-            result_response = urllib.request.urlopen(result_req)
-            if result_response.getcode() != 200:
-                futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
-        except Exception as e:
-            futil.log(f"entry.py::get_logic - Error in result request: {e}")
-        finally:
-            delete_files(before_screenshot_path, after_screenshot_path)
+
+        result_response = urllib.request.urlopen(result_req)
+        if result_response.getcode() != 200:
+            futil.log(
+                f"entry.py::get_logic - Error sending result: {result_response.getcode()}"
+            )
+        
+        delete_files(before_screenshot_path, after_screenshot_path)
     except Exception as e:
         futil.log(f"entry.py::get_logic - Error executing logic: {e}")
         # Send error result
@@ -205,7 +244,7 @@ def get_logic():
             "user_id": login.get_user_id(),
             "operation_id": operation_id,
             "status": "error",
-            "message": str(e)
+            "message": str(e),
         }
         error_payload = json.dumps(error_result).encode("utf-8")
         error_req = urllib.request.Request(
@@ -214,31 +253,6 @@ def get_logic():
             headers={"Content-Type": "application/json"},
             method="POST",
         )
-        try:
-            error_response = urllib.request.urlopen(error_req)
-        except:
-            pass
-        finally:
-            # Delete the screenshot files in case of error
-            delete_files(before_screenshot_path, compressed_before_screenshot_path, after_screenshot_path, compressed_after_screenshot_path)
-
-# Modified schedule_get_logic to check authentication before executing
-def schedule_get_logic():
-    global timer, is_timer_running
-    if not is_timer_running:
-        return
-        
-    # Check if user is authenticated before polling
-    from ...commands.Login import entry as login
-    if not login.is_user_authenticated():
-        futil.log("entry.py::schedule_get_logic - User not authenticated, stopping polling")
-        stop_polling()
-        return
-        
-    # futil.log("entry.py::schedule_get_logic - Scheduling get_logic")
-    get_logic()
-    timer = threading.Timer(2, schedule_get_logic)
-    timer.start()
 
 
 # Add a function to stop polling
@@ -256,16 +270,19 @@ def start():
     global timer, is_timer_running
     # ******************************** Create Command Definition ********************************
     futil.log("entry.py::start - FORGEMIND ADD IN BEING RUN - start")
-    
+
     # Check if user is authenticated before starting polling
-    from ...commands.Login import entry as login
     is_auth = login.is_user_authenticated()
     user_id = login.get_user_id()
-    futil.log(f"entry.py::start - User authenticated: {is_auth}, User ID: {user_id or 'None'}")
-    
+    futil.log(
+        f"entry.py::start - User authenticated: {is_auth}, User ID: {user_id or 'None'}"
+    )
+
     # Double-check authentication - make sure we have both authenticated flag AND user ID
     if not is_auth or not user_id:
-        futil.log(f"entry.py::start - Authentication check failed: is_auth={is_auth}, user_id={user_id or 'None'}")
+        futil.log(
+            f"entry.py::start - Authentication check failed: is_auth={is_auth}, user_id={user_id or 'None'}"
+        )
         # If either check fails, consider user not authenticated
         is_auth = False
         # Reset timer to ensure no polling occurs
@@ -325,38 +342,59 @@ def start():
             # Create a simple verification request to test if we can actually connect
             workspace_desc = {"user_id": user_id, "test_auth": True}
             json_payload = json.dumps(workspace_desc).encode("utf-8")
-            
+
             test_req = urllib.request.Request(
                 f"{config.API_BASE_URL}/poll",
                 data=json_payload,
                 headers={"Content-Type": "application/json"},
                 method="POST",
             )
-            
+
             try:
                 test_response = urllib.request.urlopen(test_req)
                 # If we got a 200 response, authentication is working
                 if test_response.getcode() == 200:
-                    futil.log("entry.py::start - Authentication verified with backend, starting polling")
+                    futil.log(
+                        "entry.py::start - Authentication verified with backend, starting polling"
+                    )
+
+                    # Check if user is authenticated before polling
+                    if not login.is_user_authenticated():
+                        futil.log(
+                            "entry.py::schedule_get_logic - User not authenticated, stopping polling"
+                        )
+                        stop_polling()
+                        return
                     # Now it's safe to start polling
                     start_polling()
                 else:
-                    futil.log(f"entry.py::start - Backend verification failed with status {test_response.getcode()}")
+                    futil.log(
+                        f"entry.py::start - Backend verification failed with status {test_response.getcode()}"
+                    )
             except urllib.error.HTTPError as e:
                 if e.code == 401:
                     # Authentication issue - inform user and don't start polling
-                    futil.log("entry.py::start - Backend rejected authentication, showing login prompt")
+                    futil.log(
+                        "entry.py::start - Backend rejected authentication, showing login prompt"
+                    )
                     login.was_logged_out = True  # Force re-login
                     login.is_authenticated = False
-                    ui.messageBox("Please login again to use ForgeMind.", "Authentication Required")
+                    ui.messageBox(
+                        "Please login again to use ForgeMind.",
+                        "Authentication Required",
+                    )
                 else:
-                    futil.log(f"entry.py::start - HTTP error while verifying auth: {e.code}")
+                    futil.log(
+                        f"entry.py::start - HTTP error while verifying auth: {e.code}"
+                    )
             except Exception as e:
                 futil.log(f"entry.py::start - Error verifying authentication: {str(e)}")
         except Exception as e:
             futil.log(f"entry.py::start - Failed to verify authentication: {str(e)}")
     else:
-        futil.log("entry.py::start - Not starting polling because user is not authenticated")
+        futil.log(
+            "entry.py::start - Not starting polling because user is not authenticated"
+        )
         is_timer_running = False
 
 
@@ -431,10 +469,22 @@ def start_polling():
         # Already polling, don't start again
         futil.log("entry.py::start_polling - Already polling, not starting again")
         return
-        
+
     futil.log("entry.py::start_polling - Starting polling")
     is_timer_running = True
     get_logic()  # run immediately
     timer = threading.Timer(2, schedule_get_logic)
     timer.start()
     futil.log("entry.py::start_polling - Polling started successfully")
+
+
+# Modified schedule_get_logic to check authentication before executing
+def schedule_get_logic():
+    global timer, is_timer_running
+    if not is_timer_running:
+        return
+
+    # futil.log("entry.py::schedule_get_logic - Scheduling get_logic")
+    get_logic()
+    timer = threading.Timer(2, schedule_get_logic)
+    timer.start()

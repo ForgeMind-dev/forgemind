@@ -23,19 +23,19 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const [loadingText, setLoadingText] = useState("Designing");
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  
+
   // Check if we're in new chat mode or if the selected chat doesn't exist
   const isEmptyState = activeChatIndex === -1 || !chats[activeChatIndex];
-  
+
   // Safely get the current chat
   const currentChat = !isEmptyState ? chats[activeChatIndex] : null;
-  
+
   // Safely determine the base text for loading
   const lastUserMessage = currentChat?.messages
     ?.slice()
     ?.reverse()
     ?.find((msg) => msg.role === "user")?.content || "";
-    
+
   const baseText = lastUserMessage.trim().split(' ')[0].toLowerCase() === "design"
     ? "Designing"
     : "Reasoning";
@@ -43,20 +43,24 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   // Render a single message with fade-in animation
   const renderMessage = (message: any, index: number) => {
     const isUser = message.role === 'user';
-    
-    // Filter Python code in assistant messages
-    let content = message.content;
-    if (!isUser && containsPythonCADCode(content)) {
-      content = "Design created! Let me know if you need any modifications or want to start a new design.";
+    let messageContent;
+    if (isUser) {
+      messageContent = message.content;
+    } else {
+      try {
+        messageContent = JSON.parse(message.content)['user_facing_response'] || "An error occurred";
+      } catch (error) {
+        messageContent = "An error occurred";
+      }
     }
-    
+
     return (
-      <div 
-        key={index} 
+      <div
+        key={index}
         className={`msg ${isUser ? 'user-msg' : 'ai-msg'}`}
       >
         <div className="markdown-content">
-          <ReactMarkdown>{content}</ReactMarkdown>
+          <ReactMarkdown>{messageContent}</ReactMarkdown>
         </div>
       </div>
     );
@@ -80,7 +84,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         dots = (dots + 1) % 4;
       }, 500);
     }
-    
+
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -98,10 +102,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   // Otherwise, render the messages
   return (
     <div ref={messagesEndRef} className="messages-container">
-      {currentChat?.messages.map((message, index) => 
+      {currentChat?.messages.map((message, index) =>
         renderMessage(message, index)
       )}
-      
+
       {/* Show only a single loading indicator - no need for multiple states */}
       {(isLoading || isNavigating) && (
         <div className="msg ai-msg loading-bubble">

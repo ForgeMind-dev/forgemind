@@ -467,23 +467,21 @@ def start():
     # Check if already authenticated
     if load_auth_data():
         # User is already authenticated, show a dialog with logout option
-        # Use OK/Cancel instead of Yes/No since the Yes/No constants don't seem to work properly
         result = ui.messageBox(
-            "You are already authenticated with ForgeMind.\n\nWould you like to sign out?",
+            "You are already authenticated with ForgeMind.\n\nWould you like to continue with the same account?",
             "ForgeMind Authentication",
-            1,  # OK/Cancel buttons (0 = OK, 1 = OK/Cancel)
-            2   # Question mark icon
+            adsk.core.MessageBoxButtonTypes.YesNoButtonType,
+            adsk.core.MessageBoxIconTypes.QuestionIconType
         )
         
-        # For OK/Cancel dialog: 0 = OK clicked, 1 = Cancel clicked
-        if result == 0:  # OK was clicked (equivalent to "Yes")
+        if result == adsk.core.DialogResults.DialogNo:
             # User wants to logout
             if logout():
                 ui.messageBox("You have been signed out successfully.")
                 # Execute the command to show the login dialog again
                 cmd_def.execute()
             else:
-                ui.messageBox("Error during logout. Please try again.", "Logout Failed", 0, 1)  # OK button with warning icon
+                ui.messageBox("Error during logout. Please try again.", "Logout Failed", adsk.core.MessageBoxButtonTypes.OKButtonType, adsk.core.MessageBoxIconTypes.WarningIconType)
         return
     
     # If not authenticated, execute the command to show the login dialog

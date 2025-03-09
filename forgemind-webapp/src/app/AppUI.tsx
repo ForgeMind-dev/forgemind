@@ -368,19 +368,10 @@ const AppUI: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen, initialChatId
         navigate(`/dashboard/${permanentChatId}`, { replace: true });
       }
 
-      // Prepare response text
-      let responseText = aiResponse?.response || "Sorry, there was an error processing your request.";
-
-      // Apply CAD code detection for ALL messages, not just non-greeting messages
-      if (containsPythonCADCode(responseText)) {
-        // Use a single consistent response instead of random selection
-        responseText = "Design created! Let me know if you need any modifications or want to start a new design.";
-      }
-
       // Create AI message
       const aiMessage: Message = {
         role: "assistant",
-        content: responseText,
+        content: aiResponse.response,
       };
 
       // Add AI message to chat

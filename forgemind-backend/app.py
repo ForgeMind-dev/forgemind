@@ -34,7 +34,9 @@ supabase: Client = create_client(SUPABASE_URL, SUPABASE_ANON_KEY)
 
 # Retrieve Supabase S3 credentials from environment variables
 SUPABASE_STORAGE_S3_ACCESS_KEY_ID = os.getenv("SUPABASE_STORAGE_S3_ACCESS_KEY_ID")
-SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY = os.getenv("SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY")
+SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY = os.getenv(
+    "SUPABASE_STORAGE_S3_SECRET_ACCESS_KEY"
+)
 
 # Initialize Supabase Storage client
 storage_client = supabase.storage
@@ -164,7 +166,7 @@ def chat():
                     {
                         "title": f"Chat {data.text[:30]}...",  # Use the first 30 chars as title
                         "user_id": data.user_id,
-                        "assistant_id": "asst_oXIfV78tGu083fATRFRY7HMW",
+                        "assistant_id": "asst_SICfkmxReT9Xd76xOmieEqpL",
                         "thread_id": data.thread_id,
                     }
                 )
@@ -179,7 +181,7 @@ def chat():
                 {
                     "title": f"Chat {data.text[:30]}...",  # Use the first 30 chars as title
                     "user_id": data.user_id,
-                    "assistant_id": "asst_oXIfV78tGu083fATRFRY7HMW",
+                    "assistant_id": "asst_SICfkmxReT9Xd76xOmieEqpL",
                 }
             )
             .execute()
@@ -192,7 +194,7 @@ def chat():
     ).execute()
 
     # Use existing thread if provided; otherwise, create a new one.
-    if (data.thread_id):
+    if data.thread_id:
         thread_id = data.thread_id
         # Assuming the thread exists; in production, you might verify it.
     else:
@@ -243,13 +245,13 @@ def chat():
     print(content)
     print("------- Query Complete -----------------------")
     # Add a message to the thread using the determined thread_id.
-    message = client.beta.threads.messages.create(
+    client.beta.threads.messages.create(
         thread_id=thread_id, role="user", content=content
     )
 
     # Create a run using the thread_id.
     run = client.beta.threads.runs.create(
-        thread_id=thread_id, assistant_id="asst_oXIfV78tGu083fATRFRY7HMW"
+        thread_id=thread_id, assistant_id="asst_SICfkmxReT9Xd76xOmieEqpL"
     )
 
     # Wait for the run to complete
@@ -261,11 +263,16 @@ def chat():
     messages = client.beta.threads.messages.list(thread_id=thread_id)
 
     # Accumulate the assistant's response
-    assistant_response = ""
-    for message in messages.data:
-        if message.role == "assistant":
-            message_chunk = message.content[0].text.value
-            assistant_response += message_chunk
+    assistant_response = next(
+        (
+            msg["content"]
+            for msg in parse_messages(messages)
+            if msg["role"] == "assistant"
+        ),
+        "No response from assistant",
+    )
+
+    assistant_response = json.loads(assistant_response)
 
     # Add the assistant response to the messages table
     supabase.table("messages").insert(
@@ -274,21 +281,22 @@ def chat():
 
     supabase.table("operations").insert(
         {
-            "instructions": assistant_response,
+            "steps": assistant_response["steps"],
+            "python_code": assistant_response["python_code"],
+            "user_facing_response": assistant_response["user_facing_response"],
             "chat_id": chat_id,
             "user_id": data.user_id,
             "cad_type": "fusion",
             "status": "pending",
         }
     ).execute()
-
     # Log operation creation for security auditing
     print(f"Created new operation for user {data.user_id} with chat_id {chat_id}")
 
     return jsonify(
         {
             "status": "success",
-            "response": assistant_response,
+            "response": assistant_response["user_facing_response"],
             "thread_id": thread_id,
             "chat_id": chat_id,
         }
@@ -347,12 +355,18 @@ def instruction_result():
                     # Compress the image
                     image = Image.open(BytesIO(image_data))
                     compressed_image_io = BytesIO()
-                    image.save(compressed_image_io, format="PNG", optimize=True, quality=85)
+                    image.save(
+                        compressed_image_io, format="PNG", optimize=True, quality=85
+                    )
                     compressed_image_io.seek(0)
                     # Upload to Supabase Storage
-                    storage_client.from_(bucket_name).upload(filename, compressed_image_io)
+                    storage_client.from_(bucket_name).upload(
+                        filename, compressed_image_io
+                    )
                     # Get the public URL of the uploaded image
-                    public_url = storage_client.from_(bucket_name).get_public_url(filename)
+                    public_url = storage_client.from_(bucket_name).get_public_url(
+                        filename
+                    )
                     return public_url
                 except Exception as e:
                     print(f"Error uploading screenshot: {e}")
@@ -362,9 +376,13 @@ def instruction_result():
             after_screenshot_url = None
 
             if before_screenshot:
-                before_screenshot_url = upload_screenshot(before_screenshot, f"{user_id}_before.png")
+                before_screenshot_url = upload_screenshot(
+                    before_screenshot, f"{user_id}_before.png"
+                )
             if after_screenshot:
-                after_screenshot_url = upload_screenshot(after_screenshot, f"{user_id}_after.png")
+                after_screenshot_url = upload_screenshot(
+                    after_screenshot, f"{user_id}_after.png"
+                )
 
             # Update operation status with screenshot URLs
             supabase.table("operations").update(
@@ -421,10 +439,10 @@ def poll():
         last_seen = redis_client.get(f"plugin_last_seen:{user_id}")
         last_seen_value = last_seen.decode("utf-8") if last_seen else "none"
 
-        print(f"REDIS STATE for user {user_id}:")
-        print(f"  plugin_login: {plugin_login_value}")
-        print(f"  explicitly_logged_out: {explicit_logout_value}")
-        print(f"  last_seen: {last_seen_value}")
+        # print(f"REDIS STATE for user {user_id}:")
+        # print(f"  plugin_login: {plugin_login_value}")
+        # print(f"  explicitly_logged_out: {explicit_logout_value}")
+        # print(f"  last_seen: {last_seen_value}")
     except Exception as e:
         print(f"Warning: Error retrieving Redis diagnostic data: {e}")
 
@@ -560,7 +578,7 @@ def get_instructions():
     return jsonify(
         {
             "status": True,
-            "instructions": op["instructions"],
+            "instructions": op["python_code"],
             "operation_id": op["id"],
             "chat_id": op["chat_id"],
         }
@@ -984,10 +1002,10 @@ def check_plugin_login():
         last_seen = redis_client.get(f"plugin_last_seen:{user_id}")
         last_seen_value = last_seen.decode("utf-8") if last_seen else "none"
 
-        print(f"REDIS STATE for user {user_id}:")
-        print(f"  plugin_login: {plugin_login_value}")
-        print(f"  explicitly_logged_out: {explicit_logout_value}")
-        print(f"  last_seen: {last_seen_value}")
+        # print(f"REDIS STATE for user {user_id}:")
+        # print(f"  plugin_login: {plugin_login_value}")
+        # print(f"  explicitly_logged_out: {explicit_logout_value}")
+        # print(f"  last_seen: {last_seen_value}")
     except Exception as e:
         print(f"Warning: Error retrieving Redis diagnostic data: {e}")
 
@@ -1028,6 +1046,7 @@ def check_plugin_login():
 
         # Get last seen timestamp
         last_seen = redis_client.get(f"plugin_last_seen:{user_id}")
+        print(f"Last seen value: {last_seen}")
         last_seen_timestamp = int(last_seen.decode("utf-8")) if last_seen else None
 
         # Calculate if plugin is active (seen in the last 5 minutes)
@@ -1102,6 +1121,26 @@ def check_plugin_login():
             ),
             500,
         )
+
+
+def parse_messages(messages):
+    parsed_messages = []
+    for message in messages.data:
+        content = ""
+        for block in message.content:
+            if block.type == "text":
+                content += block.text.value
+        parsed_messages.append(
+            {
+                "id": message.id,
+                "role": message.role,
+                "content": content,
+                "created_at": message.created_at,
+                "thread_id": message.thread_id,
+            }
+        )
+
+    return parsed_messages
 
 
 if __name__ == "__main__":
