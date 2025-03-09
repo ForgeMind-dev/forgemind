@@ -48,9 +48,10 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       messageContent = message.content;
     } else {
       try {
-        messageContent = JSON.parse(message.content)['user_facing_response'] || "An error occurred";
+        messageContent = JSON.parse(message.content)['user_facing_response'] || "...";
       } catch (error) {
-        messageContent = "An error occurred";
+        console.log('FURGO Error parsing JSON:', error);
+        messageContent = "...";
       }
     }
 
@@ -98,6 +99,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       </div>
     );
   }
+
 
   // Otherwise, render the messages
   return (

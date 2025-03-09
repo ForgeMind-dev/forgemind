@@ -387,10 +387,7 @@ def instruction_result():
             # Update operation status with screenshot URLs
             supabase.table("operations").update(
                 {
-                    "status": final_status,
-                    "result": message,
-                    "before_screenshot_path": before_screenshot_url,
-                    "after_screenshot_path": after_screenshot_url,
+                    "status": final_status
                 }
             ).eq("id", op["id"]).execute()
 

@@ -26,7 +26,12 @@ def debug_log(message):
         futil.log(f"DEBUG: {message}")
 
 def get_workspace_state():
+    user_id = login.get_user_id() or 'anonymous'
     try:
+        if app is None:
+            futil.log("entry.py::get_workspace_description - No application object")
+            return None
+        
         active_product = app.activeProduct
         if not active_product:
             futil.log("entry.py::get_workspace_description - No active product")
@@ -35,13 +40,11 @@ def get_workspace_state():
         design = adsk.fusion.Design.cast(active_product)
 
         if not design:
-            futil.log("entry.py::get_workspace_description - No active Fusion 360 design")
-            return None
+            return ValueError("No active Fusion 360 design")
 
         # Ensure the document is valid
         if not design.parentDocument:
-            futil.log("entry.py::get_workspace_description - Invalid document")
-            return None
+            raise ValueError("No valid Fusion 360 document")
 
         description = {"name": design.parentDocument.name, "components": []}
 
@@ -83,13 +86,12 @@ def get_workspace_state():
             description["components"].append(comp_info)
 
         # Get the authenticated user's ID
-        user_id = login.get_user_id()
         
         # Use the authenticated user's ID if available, otherwise use a default
-        return {"cad_state": description, "user_id": user_id or 'anonymous'}
+        return {"cad_state": description, "user_id": user_id}
     except Exception as error:
         futil.log('Error in get_workspace_state: ' + str(error))
-        return None
+        return {"cad_state": None, "user_id": user_id}
 
 def set_active_chat(chat_id):
     """

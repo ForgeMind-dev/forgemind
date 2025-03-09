@@ -50,16 +50,22 @@ is_timer_running = False
 
 
 def save_and_compress_screenshot(filename_prefix):
-    screenshot_path = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), f"{filename_prefix}.png"
-    )
+    try:
+        screenshot_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), f"{filename_prefix}.png"
+        )
 
-    app.activeViewport.saveAsImageFile(screenshot_path, 1920, 1080)
-    futil.log(
-        f"entry.py::save_and_compress_screenshot - Screenshot saved to {screenshot_path}"
-    )
+        app.activeViewport.saveAsImageFile(screenshot_path, 1920, 1080)
+        futil.log(
+            f"entry.py::save_and_compress_screenshot - Screenshot saved to {screenshot_path}"
+        )
 
-    return screenshot_path
+        return screenshot_path
+    except Exception as e:
+        futil.log(
+            f"entry.py::save_and_compress_screenshot - Error saving screenshot: {e}"
+        )
+        return None
 
 
 def delete_files(*file_paths):
@@ -203,23 +209,23 @@ def get_logic():
         )
 
         # Save and compress screenshots before and after execution
-        before_screenshot_path = save_and_compress_screenshot(
-            "workspace_screenshot_before"
-        )
+        # before_screenshot_path = save_and_compress_screenshot(
+        #     "workspace_screenshot_before"
+        # )
         run_logic_result = run_logic(logic, chat_id)
-        after_screenshot_path = save_and_compress_screenshot(
-            "workspace_screenshot_after"
-        )
+        # after_screenshot_path = save_and_compress_screenshot(
+        #     "workspace_screenshot_after"
+        # )
 
         # Add user_id and screenshots to result payload
         run_logic_result["user_id"] = login.get_user_id()
         run_logic_result["operation_id"] = (
             operation_id  # Include operation_id in the result
         )
-        with open(before_screenshot_path, "rb") as before_img_file:
-            run_logic_result["before_screenshot"] = base64.b64encode(before_img_file.read()).decode('utf-8')
-        with open(after_screenshot_path, "rb") as after_img_file:
-            run_logic_result["after_screenshot"] = base64.b64encode(after_img_file.read()).decode('utf-8')
+        # with open(before_screenshot_path, "rb") as before_img_file:
+        # run_logic_result["before_screenshot"] = base64.b64encode(before_img_file.read()).decode('utf-8')
+        # with open(after_screenshot_path, "rb") as after_img_file:
+        # run_logic_result["after_screenshot"] = base64.b64encode(after_img_file.read()).decode('utf-8')
 
         # Send run_logic_result to /instruction_result
         result_payload = json.dumps(run_logic_result).encode("utf-8")
@@ -235,8 +241,8 @@ def get_logic():
             futil.log(
                 f"entry.py::get_logic - Error sending result: {result_response.getcode()}"
             )
-        
-        delete_files(before_screenshot_path, after_screenshot_path)
+
+        # delete_files(before_screenshot_path, after_screenshot_path)
     except Exception as e:
         futil.log(f"entry.py::get_logic - Error executing logic: {e}")
         # Send error result
