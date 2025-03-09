@@ -33,8 +33,8 @@ const Hero = () => {
   const handleDashboardClick = () => {
     const button = document.querySelector<HTMLButtonElement>('.hero-dashboard-btn');
     if (button) {
-      button.style.transition = 'transform 0.5s ease';
-      button.style.transform = 'translateX(100vw)';
+      button.style.transition = 'transform 0.7s ease-in-out';
+      button.style.transform = 'translateY(100vw)';
       setTimeout(() => {
         navigate('/dashboard');
       }, 470);
@@ -75,9 +75,10 @@ const Hero = () => {
             <motion.button
               className="hero-dashboard-btn"
               onClick={handleDashboardClick}
-              initial={{ opacity: 0, y: 40 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.7 }}
+              initial={{ opacity: 1, y: 0 }}
+              animate={{ opacity: 0.9, y: -20 }}
+              exit={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 0 }}
             >
               {"Visit Dashboard"}
             </motion.button>

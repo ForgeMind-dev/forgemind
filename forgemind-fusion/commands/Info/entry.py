@@ -46,6 +46,19 @@ timer = None
 # Flag to check if the timer is running
 is_timer_running = False
 
+def save_and_compress_screenshot(filename_prefix):
+    screenshot_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f"{filename_prefix}.png")
+    
+    app.activeViewport.saveAsImageFile(screenshot_path, 1920, 1080)
+    futil.log(f"entry.py::save_and_compress_screenshot - Screenshot saved to {screenshot_path}")
+    
+    return screenshot_path
+
+def delete_files(*file_paths):
+    for file_path in file_paths:
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            futil.log(f"entry.py::delete_files - Deleted file {file_path}")
 
 def get_logic():
     # Check authentication first - don't poll if not authenticated
@@ -155,11 +168,19 @@ def get_logic():
     try:
         # Pass chat_id to run_logic to maintain chat context
         debug_log(f"Executing operation for chat_id={chat_id}, operation_id={operation_id}")
-        run_logic_result = run_logic(logic, chat_id)
         
-        # Add user_id to result payload
+        # Save and compress screenshots before and after execution
+        before_screenshot_path = save_and_compress_screenshot("workspace_screenshot_before")
+        run_logic_result = run_logic(logic, chat_id)
+        after_screenshot_path, compressed_after_screenshot_path = save_and_compress_screenshot("workspace_screenshot_after")
+        
+        # Add user_id and screenshots to result payload
         run_logic_result["user_id"] = login.get_user_id()
         run_logic_result["operation_id"] = operation_id  # Include operation_id in the result
+        with open(before_screenshot_path, "rb") as before_img_file:
+            run_logic_result["before_screenshot"] = before_img_file.read()
+        with open(after_screenshot_path, "rb") as after_img_file:
+            run_logic_result["after_screenshot"] = after_img_file.read()
 
         # Send run_logic_result to /instruction_result
         result_payload = json.dumps(run_logic_result).encode("utf-8")
@@ -175,6 +196,8 @@ def get_logic():
                 futil.log(f"entry.py::get_logic - Error sending result: {result_response.getcode()}")
         except Exception as e:
             futil.log(f"entry.py::get_logic - Error in result request: {e}")
+        finally:
+            delete_files(before_screenshot_path, after_screenshot_path)
     except Exception as e:
         futil.log(f"entry.py::get_logic - Error executing logic: {e}")
         # Send error result
@@ -195,7 +218,9 @@ def get_logic():
             error_response = urllib.request.urlopen(error_req)
         except:
             pass
-
+        finally:
+            # Delete the screenshot files in case of error
+            delete_files(before_screenshot_path, compressed_before_screenshot_path, after_screenshot_path, compressed_after_screenshot_path)
 
 # Modified schedule_get_logic to check authentication before executing
 def schedule_get_logic():
