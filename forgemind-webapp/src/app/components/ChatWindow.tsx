@@ -3,7 +3,6 @@ import ReactMarkdown from 'react-markdown';
 import { Chat } from '../types';
 import { useLocation } from 'react-router-dom';
 import '../styles/ChatWindow.css';
-import { containsPythonCADCode } from '../utils/messageUtils';
 
 interface ChatWindowProps {
   chats: Chat[];
@@ -48,9 +47,9 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       messageContent = message.content;
     } else {
       try {
-        messageContent = JSON.parse(message.content)['user_facing_response'] || "...";
+        messageContent = JSON.parse(message.content)['user_facing_response'];
       } catch (error) {
-        console.log('FURGO Error parsing JSON:', error);
+        console.log('FURGO Error parsing JSON:', error, message);
         messageContent = "...";
       }
     }

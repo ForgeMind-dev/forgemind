@@ -522,13 +522,13 @@ def run_logic(logic: str, chat_id=None) -> dict:
         exec(logic)
         return {
             'status': 'success',
-            'message': '',
+            'error_message': None,
             **get_workspace_state()
         }
     except Exception as error:
         futil.log('[entry.py::get_logic] Error: ' + str(error))
         return {
             'status': 'error',
-            'message': str(error),
+            'error_message': str(error),
             **get_workspace_state()
         }

@@ -222,6 +222,7 @@ def get_logic():
         run_logic_result["operation_id"] = (
             operation_id  # Include operation_id in the result
         )
+
         # with open(before_screenshot_path, "rb") as before_img_file:
         # run_logic_result["before_screenshot"] = base64.b64encode(before_img_file.read()).decode('utf-8')
         # with open(after_screenshot_path, "rb") as after_img_file:
@@ -250,7 +251,7 @@ def get_logic():
             "user_id": login.get_user_id(),
             "operation_id": operation_id,
             "status": "error",
-            "message": str(e),
+            "error_message": str(e),
         }
         error_payload = json.dumps(error_result).encode("utf-8")
         error_req = urllib.request.Request(

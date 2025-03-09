@@ -308,10 +308,8 @@ def instruction_result():
     data = request.get_json()
     user_id = data.get("user_id")
     cad_state = data.get("cad_state")
-    message = data.get("message")
+    error_message = data.get("error_message")
     status = data.get("status")
-    before_screenshot = data.get("before_screenshot")
-    after_screenshot = data.get("after_screenshot")
 
     if not user_id:
         print("Missing user_id")
@@ -319,7 +317,7 @@ def instruction_result():
     if not cad_state:
         print("Missing cad_state")
         return jsonify({"status": False, "message": "Missing cad_state"}), 400
-    if not message and status != "success":
+    if not error_message and status != "success":
         print("Missing message")
         return jsonify({"status": False, "message": "Missing message"}), 400
     if not status:
@@ -346,43 +344,6 @@ def instruction_result():
 
         if sent_ops.data and len(sent_ops.data) > 0:
             op = sent_ops.data[0]
-
-            # Upload screenshots to Supabase S3 storage
-            def upload_screenshot(screenshot_data, filename):
-                try:
-                    # Decode the base64 image data
-                    image_data = base64.b64decode(screenshot_data.split(",")[1])
-                    # Compress the image
-                    image = Image.open(BytesIO(image_data))
-                    compressed_image_io = BytesIO()
-                    image.save(
-                        compressed_image_io, format="PNG", optimize=True, quality=85
-                    )
-                    compressed_image_io.seek(0)
-                    # Upload to Supabase Storage
-                    storage_client.from_(bucket_name).upload(
-                        filename, compressed_image_io
-                    )
-                    # Get the public URL of the uploaded image
-                    public_url = storage_client.from_(bucket_name).get_public_url(
-                        filename
-                    )
-                    return public_url
-                except Exception as e:
-                    print(f"Error uploading screenshot: {e}")
-                    return None
-
-            before_screenshot_url = None
-            after_screenshot_url = None
-
-            if before_screenshot:
-                before_screenshot_url = upload_screenshot(
-                    before_screenshot, f"{user_id}_before.png"
-                )
-            if after_screenshot:
-                after_screenshot_url = upload_screenshot(
-                    after_screenshot, f"{user_id}_after.png"
-                )
 
             # Update operation status with screenshot URLs
             supabase.table("operations").update(

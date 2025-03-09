@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import Sidebar from "./components/Sidebar";
 import ChatWindow from "./components/ChatWindow";
 import BottomBar from "./components/BottomBar";
@@ -7,7 +7,6 @@ import { sendPrompt, getUserChats, getChatMessages, deleteChat, checkPluginLogin
 import Header from "../components/layout/Header";
 import { supabase } from "../supabaseClient";
 import { useNavigate, useLocation } from "react-router-dom";
-import { containsPythonCADCode } from "./utils/messageUtils";
 
 // Import modular CSS
 import "./styles/reset.css";
