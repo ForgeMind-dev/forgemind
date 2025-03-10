@@ -33,7 +33,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const lastUserMessage = currentChat?.messages
     ?.slice()
     ?.reverse()
-    ?.find((msg) => msg.role === "user")?.content || "";
+    ?.find((msg) => msg.role === "user")?.content.user_facing_response || "";
 
   const baseText = lastUserMessage.trim().split(' ')[0].toLowerCase() === "design"
     ? "Designing"
@@ -43,16 +43,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   const renderMessage = (message: any, index: number) => {
     const isUser = message.role === 'user';
     let messageContent;
-    if (isUser) {
-      messageContent = message.content;
-    } else {
+    console.log('FURGO before', message)
+    if (typeof message.content === 'string') {
       try {
-        messageContent = JSON.parse(message.content)['user_facing_response'];
-      } catch (error) {
-        console.log('FURGO Error parsing JSON:', error, message);
-        messageContent = "...";
+        const parsedContent = JSON.parse(message.content);
+        messageContent = parsedContent.user_facing_response || message.content;
+      } catch (e) {
+        messageContent = message.content;
       }
+    } else {
+      messageContent = message.content.user_facing_response;
     }
+    console.log('FURGO after', messageContent)
 
     return (
       <div
@@ -72,7 +74,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
       // Scroll to the bottom
       messagesEndRef.current.scrollTop = messagesEndRef.current.scrollHeight;
     }
-  }, [currentChat?.messages, isLoading]);
+  }, [currentChat, isLoading]);
 
   // Animate the loading text - also unconditional hook call
   useEffect(() => {

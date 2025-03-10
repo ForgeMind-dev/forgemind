@@ -13,7 +13,7 @@ export async function sendPrompt(text: string, userId: string, threadId?: string
   status: string;
   chat_id: string;
   thread_id: string;
-  response: string;
+  response: any;
 }> {
   // threadId is OpenAI's thread ID, which is stored in our database's thread_id column
   // The API will return both thread_id (OpenAI) and chat_id (our database primary key)

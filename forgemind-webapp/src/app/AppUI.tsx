@@ -259,7 +259,7 @@ const AppUI: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen, initialChatId
     // Create user message object
     const userMessage: Message = {
       role: "user",
-      content: input,
+      content: { "user_facing_response": input },
     };
 
     let updatedChats = [...chats];
@@ -326,7 +326,7 @@ const AppUI: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen, initialChatId
         // Just add the error message about plugin status
         const errorMessage: Message = {
           role: "assistant" as const,
-          content: "⚠️ Plugin is offline or disconnected. Please connect your Fusion 360 plugin and log in to use this feature."
+          content: { user_facing_response: "⚠️ Plugin is offline or disconnected. Please connect your Fusion 360 plugin and log in to use this feature." }
         };
 
         // Add error message
@@ -387,6 +387,7 @@ const AppUI: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen, initialChatId
         return 0;
       });
 
+      console.log('FURGO chats', updatedChats)
       // Update state with the new message
       setChats([...updatedChats]);
       setIsNavigating(false); // Navigation complete
@@ -397,7 +398,7 @@ const AppUI: React.FC<AppProps> = ({ onToggleSidebar, sidebarOpen, initialChatId
       // Create error message
       const errorMessage: Message = {
         role: "assistant",
-        content: "Sorry, I encountered an error. Please try again.",
+        content: { "user_facing_response": "Sorry, I encountered an error. Please try again." },
       };
 
       // Add error message to chat

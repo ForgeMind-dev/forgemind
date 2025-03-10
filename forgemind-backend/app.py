@@ -296,7 +296,7 @@ def chat():
     return jsonify(
         {
             "status": "success",
-            "response": assistant_response["user_facing_response"],
+            "response": assistant_response,
             "thread_id": thread_id,
             "chat_id": chat_id,
         }
@@ -378,6 +378,7 @@ def instruction_result():
 @app.route("/poll", methods=["POST"])
 def poll():
     data = request.get_json()
+    print(data)
     cad_state = data.get("cad_state")
     user_id = data.get("user_id")
 
