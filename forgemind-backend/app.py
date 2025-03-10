@@ -31,6 +31,94 @@ class ChatPayload(BaseModel):
     text: str
     user_id: str
 
+class AuthPayload(BaseModel):
+    email: str
+    password: str
+
+@app.route('/auth/verify', methods=['POST'])
+def verify_credentials():
+    try:
+        data = AuthPayload(**request.get_json())
+    except ValidationError as e:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid payload",
+            "errors": e.errors(),
+            "is_valid": False
+        }), 400
+    
+    try:
+        # Attempt to sign in with Supabase
+        response = supabase.auth.sign_in_with_password({
+            "email": data.email,
+            "password": data.password
+        })
+        
+        # If we get here, authentication was successful
+        return jsonify({
+            "status": "success",
+            "message": "Authentication successful",
+            "is_valid": True,
+            "session": {
+                "access_token": response.session.access_token if response.session else None,
+                "user": {
+                    "email": response.user.email if response.user else None,
+                    "id": response.user.id if response.user else None
+                } if response.user else None
+            }
+        })
+    except Exception as e:
+        # Handle specific Supabase error types
+        error_msg = str(e)
+        if "Invalid login credentials" in error_msg:
+            return jsonify({
+                "status": "error",
+                "message": "Invalid email or password",
+                "is_valid": False
+            }), 401
+        elif "rate limit" in error_msg.lower():
+            return jsonify({
+                "status": "error",
+                "message": "Too many login attempts. Please try again later",
+                "is_valid": False
+            }), 429
+        else:
+            return jsonify({
+                "status": "error",
+                "message": "Authentication failed",
+                "is_valid": False
+            }), 500
+
+@app.route('/auth/validate-session', methods=['POST'])
+def validate_session():
+    auth_header = request.headers.get('Authorization')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return jsonify({
+            "status": "error",
+            "message": "No token provided",
+            "is_valid": False
+        }), 401
+    
+    token = auth_header.split(' ')[1]
+    try:
+        # Verify the token with Supabase
+        user = supabase.auth.get_user(token)
+        return jsonify({
+            "status": "success",
+            "message": "Session is valid",
+            "is_valid": True,
+            "user": {
+                "email": user.user.email,
+                "id": user.user.id
+            } if user and user.user else None
+        })
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": "Invalid or expired session",
+            "is_valid": False
+        }), 401
+
 @app.route('/chat', methods=['POST'])
 def chat():
     try:
@@ -80,7 +168,6 @@ def chat():
 
 @app.route('/poll', methods=['GET'])
 def poll():
-    # return "app = adsk.core.Application.get()\nui = app.userInterface\n\ndesign = app.activeProduct\nrootComp = design.rootComponent\nsketches = rootComp.sketches\nxyPlane = rootComp.xYConstructionPlane\nsketch = sketches.add(xyPlane)\n\ncircles = sketch.sketchCurves.sketchCircles\nlines = sketch.sketchCurves.sketchLines\n\n# Draw a star using lines\ncenterPoint = adsk.core.Point3D.create(0, 0, 0)\npoints = []\nnum_points = 5\nouter_radius = 4\ninner_radius = 2\n\nfor i in range(num_points * 2):\n    angle = math.pi / num_points * i  # Twice the number of points for the star\n    if i % 2 == 0:\n        radius = outer_radius\n    else:\n        radius = inner_radius\n    x = radius * math.cos(angle)\n    y = radius * math.sin(angle)\n    points.append(adsk.core.Point3D.create(x, y, 0))\n\nfor i in range(len(points)):\n    line = lines.addByTwoPoints(points[i], points[(i + 2) % len(points)])"
     return "app = adsk.core.Application.get()\nui = app.userInterface\nui.messageBox('Hi')"
 
 if __name__ == '__main__':
