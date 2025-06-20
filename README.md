@@ -1,6 +1,6 @@
 # forgemind
 
-**READ THE FUCKING MANUAL**
+**READ THE MANUAL**
 
 This is the monorepo of ForgeMind. The reliability of this product is dependent on all parts of the stack being in sync with each other all of the time.
 
