@@ -1,6 +1,6 @@
 # forgemind
 
-**READ THE FUCKING MANUAL**
+**READ THE MANUAL**
 
 This is the monorepo of ForgeMind. The reliability of this product is dependent on all parts of the stack being in sync with each other all of the time.
 
@@ -8,7 +8,7 @@ This is the monorepo of ForgeMind. The reliability of this product is dependent 
 2. Keep dependencies (requirements.txt, package.json, etc.) synchronized. 
 3. We do not have a testing process, so we have to keep a healthy environment.
 4. Make sure that you are modifying git history at the root level directory, not just within each subfolder (forgemind-electron, forgemind-backend, etc).
-5. As you begin to touch the CAD integrations, be extra careful to **READ THE FUCKING MANUAL**
+5. As you begin to touch the CAD integrations, be extra careful to **READ THE MANUAL**
 ```
 forgemind
 ├─ README.md
